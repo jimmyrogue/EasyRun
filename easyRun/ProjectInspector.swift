@@ -17,12 +17,12 @@ enum ProjectInspector {
             scheme: scheme,
             configuration: configuration,
             deviceID: device?.udid ?? "",
-            deviceName: device?.name ?? "No device",
+            deviceName: device?.name ?? L10n.string("Device.NoDevice"),
             deviceKind: device?.kind ?? .simulator,
             deviceRuntime: device?.runtime,
             bundleID: bundleID,
             derivedDataPath: defaultDerivedDataPath(for: url, scheme: scheme),
-            statusMessage: "Imported \(scheme)"
+            statusMessage: L10n.format("StatusMessage.ImportedFormat", scheme)
         )
     }
 
@@ -68,7 +68,7 @@ enum ProjectInspector {
             throw NSError(
                 domain: "ProjectInspector",
                 code: 1,
-                userInfo: [NSLocalizedDescriptionKey: "Drop a .xcodeproj or .xcworkspace file."]
+                userInfo: [NSLocalizedDescriptionKey: L10n.string("Error.DropXcodeProject")]
             )
         }
     }

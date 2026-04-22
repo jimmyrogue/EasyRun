@@ -12,7 +12,7 @@ struct easyRunApp: App {
         }
         .commands {
             CommandGroup(replacing: .newItem) {
-                Button("Add Project...") {
+                Button(L10n.string("Action.AddProjectEllipsis")) {
                     store.showAddPanel()
                 }
                 .keyboardShortcut("o", modifiers: [.command])

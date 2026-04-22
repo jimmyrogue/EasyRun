@@ -18,7 +18,7 @@ enum ShellCommandError: LocalizedError {
                 .split(separator: "\n")
                 .suffix(18)
                 .joined(separator: "\n")
-            return "\(command) failed with exit code \(exitCode)\n\(tail)"
+            return L10n.format("Error.CommandFailedFormat", command, Int(exitCode), tail)
         }
     }
 }

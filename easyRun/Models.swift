@@ -94,13 +94,13 @@ enum DeviceGroup: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .physical: return "Physical Devices"
-        case .iPhone: return "iPhone Simulators"
-        case .iPad: return "iPad Simulators"
-        case .appleTV: return "Apple TV Simulators"
-        case .appleWatch: return "Apple Watch Simulators"
-        case .vision: return "Vision Simulators"
-        case .other: return "Other Simulators"
+        case .physical: return L10n.string("DeviceGroup.Physical")
+        case .iPhone: return L10n.string("DeviceGroup.iPhone")
+        case .iPad: return L10n.string("DeviceGroup.iPad")
+        case .appleTV: return L10n.string("DeviceGroup.AppleTV")
+        case .appleWatch: return L10n.string("DeviceGroup.AppleWatch")
+        case .vision: return L10n.string("DeviceGroup.Vision")
+        case .other: return L10n.string("DeviceGroup.Other")
         }
     }
 
@@ -142,15 +142,15 @@ enum ProjectStatus: String, Codable, CaseIterable {
 
     var label: String {
         switch self {
-        case .idle: return "Idle"
-        case .building: return "Building"
-        case .installing: return "Installing"
-        case .launching: return "Launching"
-        case .running: return "Running"
-        case .stopping: return "Stopping"
-        case .stopped: return "Stopped"
-        case .failed: return "Failed"
-        case .cleaning: return "Cleaning"
+        case .idle: return L10n.string("Status.Idle")
+        case .building: return L10n.string("Status.Building")
+        case .installing: return L10n.string("Status.Installing")
+        case .launching: return L10n.string("Status.Launching")
+        case .running: return L10n.string("Status.Running")
+        case .stopping: return L10n.string("Status.Stopping")
+        case .stopped: return L10n.string("Status.Stopped")
+        case .failed: return L10n.string("Status.Failed")
+        case .cleaning: return L10n.string("Status.Cleaning")
         }
     }
 
@@ -231,7 +231,7 @@ struct ManagedProject: Identifiable, Codable, Equatable {
     var lastRunAt: Date?
     var lastRunDuration: TimeInterval?
     var status: ProjectStatus = .idle
-    var statusMessage = "Ready"
+    var statusMessage = L10n.string("StatusMessage.Ready")
     var buildLog = ""
     var runtimeLog = ""
     var logSearch = ""
@@ -250,8 +250,14 @@ struct ManagedProject: Identifiable, Codable, Equatable {
         DevicePlatform.infer(runtime: deviceRuntime ?? "", name: deviceName)
     }
 
+    var displayDeviceName: String {
+        deviceName.trimmed.isEmpty || deviceName == "No device"
+            ? L10n.string("Device.NoDevice")
+            : deviceName
+    }
+
     var summaryLine: String {
-        "\(deviceName) · \(configuration) · Scheme: \(scheme)"
+        L10n.format("Project.SummaryLine", displayDeviceName, configuration, scheme)
     }
 }
 

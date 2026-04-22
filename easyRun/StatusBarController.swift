@@ -36,9 +36,12 @@ private final class StatusBarController: NSObject {
 
     func configure(store: LaunchPadStore) {
         self.store = store
-        statusItem.button?.image = NSImage(systemSymbolName: "play.square.stack", accessibilityDescription: "LaunchPad for iOS")
+        statusItem.button?.image = NSImage(
+            systemSymbolName: "play.square.stack",
+            accessibilityDescription: L10n.string("Accessibility.LaunchPadForIOS")
+        )
         statusItem.button?.imagePosition = .imageLeading
-        statusItem.button?.title = " Run"
+        statusItem.button?.title = " " + L10n.string("Action.Run")
         rebuildMenu()
 
         store.$projects
@@ -60,7 +63,7 @@ private final class StatusBarController: NSObject {
         updateStatusItem()
 
         if store.projects.isEmpty {
-            let empty = NSMenuItem(title: "No Projects Yet", action: nil, keyEquivalent: "")
+            let empty = NSMenuItem(title: L10n.string("Menu.NoProjectsYet"), action: nil, keyEquivalent: "")
             empty.isEnabled = false
             menu.addItem(empty)
         } else {
@@ -71,20 +74,20 @@ private final class StatusBarController: NSObject {
 
         menu.addItem(.separator())
 
-        addMenuItem("Add Project...", image: "plus", action: { [weak store] in
+        addMenuItem(L10n.string("Action.AddProjectEllipsis"), image: "plus", action: { [weak store] in
             store?.showAddPanel()
         }, to: menu)
 
-        addMenuItem("Refresh Devices", image: "arrow.clockwise", action: { [weak store] in
+        addMenuItem(L10n.string("Action.RefreshDevices"), image: "arrow.clockwise", action: { [weak store] in
             Task { await store?.refreshDevices() }
         }, to: menu)
 
-        addMenuItem("Show Main Window", image: "macwindow", action: {
+        addMenuItem(L10n.string("Action.ShowMainWindow"), image: "macwindow", action: {
             MainWindowPresenter.show()
         }, to: menu)
 
         menu.addItem(.separator())
-        addMenuItem("Quit", image: "power", action: {
+        addMenuItem(L10n.string("Action.Quit"), image: "power", action: {
             NSApp.terminate(nil)
         }, to: menu)
 
@@ -130,7 +133,7 @@ private final class StatusBarController: NSObject {
         actionItem.isEnabled = canUsePrimaryAction(project, store: store)
         submenu.addItem(actionItem)
 
-        let targetItem = NSMenuItem(title: "Target Device", action: nil, keyEquivalent: "")
+        let targetItem = NSMenuItem(title: L10n.string("Control.TargetDevice"), action: nil, keyEquivalent: "")
         targetItem.image = NSImage(systemSymbolName: "iphone.gen3", accessibilityDescription: nil)
         targetItem.submenu = deviceMenu(for: project, store: store)
         targetItem.isEnabled = !project.status.isBusy && !store.devices.isEmpty
@@ -144,7 +147,7 @@ private final class StatusBarController: NSObject {
         let menu = NSMenu()
 
         if store.devices.isEmpty {
-            let item = NSMenuItem(title: "No Devices Found", action: nil, keyEquivalent: "")
+            let item = NSMenuItem(title: L10n.string("Menu.NoDevicesFound"), action: nil, keyEquivalent: "")
             item.isEnabled = false
             menu.addItem(item)
             return menu
@@ -202,27 +205,41 @@ private final class StatusBarController: NSObject {
         guard let button = statusItem.button, let store else { return }
 
         if store.hasFailure {
-            button.image = NSImage(systemSymbolName: "xmark.octagon.fill", accessibilityDescription: "LaunchPad failed")
-            button.title = " Issue"
+            button.image = NSImage(
+                systemSymbolName: "xmark.octagon.fill",
+                accessibilityDescription: L10n.string("Accessibility.LaunchPadFailed")
+            )
+            button.title = " " + L10n.string("StatusBar.Issue")
             button.contentTintColor = .systemRed
         } else if store.isBusy {
-            button.image = NSImage(systemSymbolName: "bolt.fill", accessibilityDescription: "LaunchPad running")
-            button.title = " Working"
+            button.image = NSImage(
+                systemSymbolName: "bolt.fill",
+                accessibilityDescription: L10n.string("Accessibility.LaunchPadWorking")
+            )
+            button.title = " " + L10n.string("StatusBar.Working")
             button.contentTintColor = .systemYellow
         } else if store.projects.contains(where: { $0.status == .running }) {
-            button.image = NSImage(systemSymbolName: "stop.circle.fill", accessibilityDescription: "LaunchPad app running")
-            button.title = " Running"
+            button.image = NSImage(
+                systemSymbolName: "stop.circle.fill",
+                accessibilityDescription: L10n.string("Accessibility.LaunchPadAppRunning")
+            )
+            button.title = " " + L10n.string("Status.Running")
             button.contentTintColor = .systemGreen
         } else {
-            button.image = NSImage(systemSymbolName: "play.square.stack", accessibilityDescription: "LaunchPad for iOS")
-            button.title = " Run"
+            button.image = NSImage(
+                systemSymbolName: "play.square.stack",
+                accessibilityDescription: L10n.string("Accessibility.LaunchPadForIOS")
+            )
+            button.title = " " + L10n.string("Action.Run")
             button.contentTintColor = nil
         }
     }
 
     private func primaryActionTitle(for project: ManagedProject) -> String {
-        if project.status.isBusy { return "\(project.status.label)..." }
-        return project.status == .running ? "Stop \(project.name)" : "Run \(project.name)"
+        if project.status.isBusy { return L10n.format("Menu.BusyActionFormat", project.status.label) }
+        return project.status == .running
+            ? L10n.format("Menu.StopProjectFormat", project.name)
+            : L10n.format("Menu.RunProjectFormat", project.name)
     }
 
     private func canUsePrimaryAction(_ project: ManagedProject, store: LaunchPadStore) -> Bool {
@@ -283,7 +300,7 @@ private enum MainWindowPresenter {
             backing: .buffered,
             defer: false
         )
-        window.title = "LaunchPad for iOS"
+        window.title = L10n.string("Window.Title")
         window.center()
         window.contentView = NSHostingView(
             rootView: ContentView()

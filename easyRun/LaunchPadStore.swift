@@ -45,7 +45,7 @@ final class LaunchPadStore: ObservableObject {
             xcodePath = result.output.trimmed
         } catch {
             xcodePath = ""
-            globalMessage = "Xcode Command Line Tools were not found. Install Xcode and run xcode-select first."
+            globalMessage = L10n.string("Message.XcodeToolsNotFound")
         }
     }
 
@@ -59,7 +59,7 @@ final class LaunchPadStore: ObservableObject {
             await refreshDevices()
             let projectURLs = resolveProjectURLs(from: urls)
             guard !projectURLs.isEmpty else {
-                globalMessage = "No .xcodeproj or .xcworkspace found in the selected folder."
+                globalMessage = L10n.string("Message.NoProjectsFound")
                 return
             }
 
@@ -85,19 +85,21 @@ final class LaunchPadStore: ObservableObject {
             }
 
             if addedCount > 0 {
-                let skippedText = skippedCount > 0 ? " \(skippedCount) duplicate skipped." : ""
-                globalMessage = "\(addedCount) project\(addedCount == 1 ? "" : "s") added.\(skippedText)"
+                let skippedText = skippedCount > 0 ? " " + L10n.format("Message.DuplicatesSkippedFormat", skippedCount) : ""
+                globalMessage = addedCount == 1
+                    ? L10n.format("Message.ProjectAddedFormat", skippedText)
+                    : L10n.format("Message.ProjectsAddedFormat", addedCount, skippedText)
             } else if skippedCount > 0 {
-                globalMessage = "All discovered projects are already in your list."
+                globalMessage = L10n.string("Message.AllProjectsAlreadyAdded")
             }
         }
     }
 
     func showAddPanel() {
         let panel = NSOpenPanel()
-        panel.title = "Choose a Folder to Scan"
-        panel.message = "Pick a folder that contains one or more .xcodeproj or .xcworkspace packages."
-        panel.prompt = "Scan"
+        panel.title = L10n.string("Panel.ScanFolder.Title")
+        panel.message = L10n.string("Panel.ScanFolder.Message")
+        panel.prompt = L10n.string("Action.Scan")
         panel.allowsMultipleSelection = true
         panel.canChooseDirectories = true
         panel.canChooseFiles = false
@@ -110,7 +112,7 @@ final class LaunchPadStore: ObservableObject {
 
     func remove(_ project: ManagedProject) {
         guard let index = projects.firstIndex(where: { $0.id == project.id }) else {
-            globalMessage = "Project is no longer in the list."
+            globalMessage = L10n.string("Message.ProjectNoLongerInList")
             return
         }
 
@@ -122,7 +124,7 @@ final class LaunchPadStore: ObservableObject {
         var updatedProjects = projects
         updatedProjects.remove(at: index)
         projects = updatedProjects
-        globalMessage = "\(removed.name) removed."
+        globalMessage = L10n.format("Message.ProjectRemovedFormat", removed.name)
         save()
     }
 
@@ -152,6 +154,10 @@ final class LaunchPadStore: ObservableObject {
         updateAndSave(id) { $0.derivedDataPath = value }
     }
 
+    func updateLogSearch(_ id: UUID, value: String) {
+        updateProject(id) { $0.logSearch = value }
+    }
+
     func selectDevice(projectID: UUID, deviceID: String) {
         guard let device = devices.first(where: { $0.id == deviceID }) else { return }
         updateAndSave(projectID) { project in
@@ -166,7 +172,7 @@ final class LaunchPadStore: ObservableObject {
         updateProject(project.id) {
             $0.buildLog = ""
             $0.runtimeLog = ""
-            $0.statusMessage = "Logs cleared"
+            $0.statusMessage = L10n.string("StatusMessage.LogsCleared")
         }
     }
 
@@ -176,25 +182,25 @@ final class LaunchPadStore: ObservableObject {
             """
             # \(project.name)
 
-            ## Build Log
+            ## \(L10n.string("Logs.Build"))
             \(project.buildLog)
 
-            ## Runtime Log
+            ## \(L10n.string("Logs.Runtime"))
             \(project.runtimeLog)
             """,
             forType: .string
         )
-        globalMessage = "Logs copied for \(project.name)."
+        globalMessage = L10n.format("Message.LogsCopiedFormat", project.name)
     }
 
     func run(_ project: ManagedProject) async {
         guard let snapshot = projects.first(where: { $0.id == project.id }) else { return }
         guard !snapshot.scheme.trimmed.isEmpty else {
-            markFailed(snapshot.id, message: "Scheme is required.")
+            markFailed(snapshot.id, message: L10n.string("Error.SchemeRequired"))
             return
         }
         guard !snapshot.deviceID.trimmed.isEmpty else {
-            markFailed(snapshot.id, message: "Pick a simulator or device first.")
+            markFailed(snapshot.id, message: L10n.string("Error.PickDeviceFirst"))
             return
         }
 
@@ -203,7 +209,7 @@ final class LaunchPadStore: ObservableObject {
 
         updateProject(snapshot.id) {
             $0.status = .building
-            $0.statusMessage = "Starting build..."
+            $0.statusMessage = L10n.string("StatusMessage.StartingBuild")
             $0.buildLog = ""
             $0.runtimeLog = ""
             $0.lastDevicePID = nil
@@ -225,7 +231,7 @@ final class LaunchPadStore: ObservableObject {
 
             updateProject(snapshot.id) {
                 $0.status = .installing
-                $0.statusMessage = "Installing \(appURL.lastPathComponent)..."
+                $0.statusMessage = L10n.format("StatusMessage.InstallingFormat", appURL.lastPathComponent)
             }
 
             switch snapshot.deviceKind {
@@ -233,7 +239,7 @@ final class LaunchPadStore: ObservableObject {
                 try await installOnSimulator(project: snapshot, appURL: appURL)
                 updateProject(snapshot.id) {
                     $0.status = .launching
-                    $0.statusMessage = "Launching \(bundleID)..."
+                    $0.statusMessage = L10n.format("StatusMessage.LaunchingFormat", bundleID)
                 }
                 try await launchOnSimulator(project: snapshot, bundleID: bundleID)
                 startRuntimeLog(for: snapshot, bundleID: bundleID)
@@ -241,7 +247,7 @@ final class LaunchPadStore: ObservableObject {
                 try await installOnDevice(project: snapshot, appURL: appURL)
                 updateProject(snapshot.id) {
                     $0.status = .launching
-                    $0.statusMessage = "Launching \(bundleID)..."
+                    $0.statusMessage = L10n.format("StatusMessage.LaunchingFormat", bundleID)
                 }
                 let pid = try await launchOnDevice(project: snapshot, bundleID: bundleID)
                 updateAndSave(snapshot.id) { $0.lastDevicePID = pid }
@@ -250,15 +256,21 @@ final class LaunchPadStore: ObservableObject {
             let duration = Date().timeIntervalSince(start)
             updateAndSave(snapshot.id) {
                 $0.status = .running
-                $0.statusMessage = "Launched in \(String(format: "%.1f", duration))s"
+                $0.statusMessage = L10n.format("StatusMessage.LaunchedInFormat", duration)
                 $0.lastRunAt = Date()
                 $0.lastRunDuration = duration
             }
-            notify(title: "\(snapshot.name) launched", body: "Finished in \(String(format: "%.1f", duration))s.")
+            notify(
+                title: L10n.format("Notification.LaunchedTitleFormat", snapshot.name),
+                body: L10n.format("Notification.FinishedInFormat", duration)
+            )
         } catch {
             let message = error.localizedDescription
             markFailed(snapshot.id, message: message)
-            notify(title: "Build failed", body: "\(snapshot.name): click for details.")
+            notify(
+                title: L10n.string("Notification.BuildFailedTitle"),
+                body: L10n.format("Notification.BuildFailedBodyFormat", snapshot.name)
+            )
             NSApp.activate(ignoringOtherApps: true)
         }
     }
@@ -270,7 +282,7 @@ final class LaunchPadStore: ObservableObject {
 
         updateProject(project.id) {
             $0.status = .stopping
-            $0.statusMessage = "Stopping app..."
+            $0.statusMessage = L10n.string("StatusMessage.StoppingApp")
         }
 
         do {
@@ -295,13 +307,13 @@ final class LaunchPadStore: ObservableObject {
                         }
                     )
                 } else {
-                    appendRuntimeLog(project.id, "Physical-device stop needs the launch PID. Use Run again with --terminate-existing, or stop it on the device.\n")
+                    appendRuntimeLog(project.id, L10n.string("Log.PhysicalStopNeedsPID") + "\n")
                 }
             }
 
             updateAndSave(project.id) {
                 $0.status = .stopped
-                $0.statusMessage = "Stopped"
+                $0.statusMessage = L10n.string("Status.Stopped")
             }
         } catch {
             markFailed(project.id, message: error.localizedDescription)
@@ -315,7 +327,7 @@ final class LaunchPadStore: ObservableObject {
 
         updateProject(project.id) {
             $0.status = .cleaning
-            $0.statusMessage = "Removing DerivedData..."
+            $0.statusMessage = L10n.string("StatusMessage.RemovingDerivedData")
         }
 
         do {
@@ -324,7 +336,7 @@ final class LaunchPadStore: ObservableObject {
                     domain: "LaunchPadStore",
                     code: 2,
                     userInfo: [
-                        NSLocalizedDescriptionKey: "Refusing to clean a path outside ~/Library/Developer/Xcode/DerivedData/LaunchPad-*."
+                        NSLocalizedDescriptionKey: L10n.string("Error.RefusingUnsafeClean")
                     ]
                 )
             }
@@ -339,8 +351,8 @@ final class LaunchPadStore: ObservableObject {
 
             updateAndSave(project.id) {
                 $0.status = .idle
-                $0.statusMessage = "DerivedData cleaned"
-                $0.buildLog += "\nCleaned \(project.resolvedDerivedDataURL.path)\n"
+                $0.statusMessage = L10n.string("StatusMessage.DerivedDataCleaned")
+                $0.buildLog += "\n\(L10n.format("Log.CleanedPathFormat", project.resolvedDerivedDataURL.path))\n"
             }
         } catch {
             markFailed(project.id, message: error.localizedDescription)
@@ -363,7 +375,7 @@ final class LaunchPadStore: ObservableObject {
 
     func openFirstError(for project: ManagedProject) {
         guard let match = firstErrorLocation(in: project.buildLog) else {
-            globalMessage = "No source error location found."
+            globalMessage = L10n.string("Message.NoSourceErrorLocation")
             return
         }
 
@@ -379,7 +391,7 @@ final class LaunchPadStore: ObservableObject {
     private func bootSimulator(for project: ManagedProject) async throws {
         updateProject(project.id) {
             $0.status = .launching
-            $0.statusMessage = "Booting \(project.deviceName)..."
+            $0.statusMessage = L10n.format("StatusMessage.BootingFormat", project.deviceName)
         }
 
         _ = try await ShellCommand.run(
@@ -511,9 +523,9 @@ final class LaunchPadStore: ObservableObject {
         do {
             try process.run()
             runtimeLogProcesses[project.id] = process
-            appendRuntimeLog(project.id, "Runtime log attached for \(bundleID).\n")
+            appendRuntimeLog(project.id, L10n.format("Log.RuntimeAttachedFormat", bundleID) + "\n")
         } catch {
-            appendRuntimeLog(project.id, "Runtime log failed to start: \(error.localizedDescription)\n")
+            appendRuntimeLog(project.id, L10n.format("Log.RuntimeFailedFormat", error.localizedDescription) + "\n")
         }
     }
 
@@ -688,14 +700,17 @@ final class LaunchPadStore: ObservableObject {
         projects = filteredProjects.map { project in
             var copy = project
             copy.status = .idle
-            copy.statusMessage = "Ready"
+            copy.statusMessage = L10n.string("StatusMessage.Ready")
             copy.logSearch = ""
             copy.isExpanded = false
             return copy
         }
 
         if filteredProjects.count != decoded.projects.count {
-            globalMessage = "Ignored \(decoded.projects.count - filteredProjects.count) dependency project."
+            globalMessage = L10n.format(
+                "Message.IgnoredDependencyProjectsFormat",
+                decoded.projects.count - filteredProjects.count
+            )
             save()
         }
     }
@@ -706,7 +721,7 @@ final class LaunchPadStore: ObservableObject {
             let data = try JSONEncoder.pretty.encode(PersistedProjects(projects: projects))
             try data.write(to: persistenceURL, options: .atomic)
         } catch {
-            globalMessage = "Could not save projects: \(error.localizedDescription)"
+            globalMessage = L10n.format("Message.CouldNotSaveProjectsFormat", error.localizedDescription)
         }
     }
 

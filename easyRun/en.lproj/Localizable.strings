@@ -1,0 +1,122 @@
+"Accessibility.LaunchPadAppRunning" = "LaunchPad app running";
+"Accessibility.LaunchPadFailed" = "LaunchPad failed";
+"Accessibility.LaunchPadForIOS" = "LaunchPad for iOS";
+"Accessibility.LaunchPadWorking" = "LaunchPad running";
+
+"Action.AddProject" = "Add Project";
+"Action.AddProjectEllipsis" = "Add Project...";
+"Action.CleanDerivedData" = "Clean DerivedData";
+"Action.Clear" = "Clear";
+"Action.Copy" = "Copy";
+"Action.OpenError" = "Open Error";
+"Action.Quit" = "Quit";
+"Action.RefreshDevices" = "Refresh Devices";
+"Action.RemoveFromList" = "Remove from List";
+"Action.Run" = "Run";
+"Action.Scan" = "Scan";
+"Action.ShowMainWindow" = "Show Main Window";
+"Action.Stop" = "Stop";
+
+"Configuration.BundleID" = "Bundle ID";
+"Configuration.Configuration" = "Configuration";
+"Configuration.DerivedData" = "DerivedData";
+"Configuration.Name" = "Name";
+"Configuration.Scheme" = "Scheme";
+"Configuration.Title" = "Configuration";
+
+"Control.TargetDevice" = "Target Device";
+"Device.NoDevice" = "No Device";
+
+"DeviceGroup.AppleTV" = "Apple TV Simulators";
+"DeviceGroup.AppleWatch" = "Apple Watch Simulators";
+"DeviceGroup.Other" = "Other Simulators";
+"DeviceGroup.Physical" = "Physical Devices";
+"DeviceGroup.Vision" = "Vision Simulators";
+"DeviceGroup.iPad" = "iPad Simulators";
+"DeviceGroup.iPhone" = "iPhone Simulators";
+
+"Empty.Message" = "Choose a folder and LaunchPad will scan for projects and workspaces.";
+"Empty.Title" = "Add an Xcode Project";
+
+"Error.CommandFailedFormat" = "%@ failed with exit code %d\n%@";
+"Error.DropXcodeProject" = "Drop a .xcodeproj or .xcworkspace file.";
+"Error.PickDeviceFirst" = "Pick a simulator or device first.";
+"Error.RefusingUnsafeClean" = "Refusing to clean a path outside ~/Library/Developer/Xcode/DerivedData/LaunchPad-*.";
+"Error.SchemeRequired" = "Scheme is required.";
+
+"Help.AddProject" = "Add project";
+"Help.BuildAndRun" = "Build and run";
+"Help.MoreActions" = "More actions";
+"Help.RefreshDevices" = "Refresh devices";
+"Help.StopApp" = "Stop app";
+"Help.TargetDevice" = "Target device";
+
+"Log.CleanedPathFormat" = "Cleaned %@";
+"Log.PhysicalStopNeedsPID" = "Physical-device stop needs the launch PID. Use Run again with --terminate-existing, or stop it on the device.";
+"Log.RuntimeAttachedFormat" = "Runtime log attached for %@.";
+"Log.RuntimeFailedFormat" = "Runtime log failed to start: %@";
+
+"Logs.Build" = "Build Log";
+"Logs.Empty" = "No log output yet.";
+"Logs.Runtime" = "Runtime Log";
+"Logs.SearchPlaceholder" = "Search log";
+"Logs.Title" = "Logs";
+
+"Menu.BusyActionFormat" = "%@...";
+"Menu.NoDevicesFound" = "No Devices Found";
+"Menu.NoProjectsYet" = "No Projects Yet";
+"Menu.RunProjectFormat" = "Run %@";
+"Menu.StopProjectFormat" = "Stop %@";
+
+"Message.AllProjectsAlreadyAdded" = "All discovered projects are already in your list.";
+"Message.CouldNotSaveProjectsFormat" = "Could not save projects: %@";
+"Message.DuplicatesSkippedFormat" = "%d duplicate skipped.";
+"Message.IgnoredDependencyProjectsFormat" = "Ignored %d dependency project.";
+"Message.LogsCopiedFormat" = "Logs copied for %@.";
+"Message.NoProjectsFound" = "No .xcodeproj or .xcworkspace found in the selected folder.";
+"Message.NoSourceErrorLocation" = "No source error location found.";
+"Message.ProjectAddedFormat" = "1 project added.%@";
+"Message.ProjectNoLongerInList" = "Project is no longer in the list.";
+"Message.ProjectRemovedFormat" = "%@ removed.";
+"Message.ProjectsAddedFormat" = "%d projects added.%@";
+"Message.XcodeToolsNotFound" = "Xcode Command Line Tools were not found. Install Xcode and run xcode-select first.";
+
+"Notification.BuildFailedBodyFormat" = "%@: click for details.";
+"Notification.BuildFailedTitle" = "Build failed";
+"Notification.FinishedInFormat" = "Finished in %.1fs.";
+"Notification.LaunchedTitleFormat" = "%@ launched";
+
+"Panel.ScanFolder.Message" = "Pick a folder that contains one or more .xcodeproj or .xcworkspace packages.";
+"Panel.ScanFolder.Title" = "Choose a Folder to Scan";
+
+"Project.SummaryLine" = "%@ · %@ · Scheme: %@";
+
+"Sidebar.NoProjects" = "No Projects";
+"Sidebar.Projects" = "Projects";
+
+"Status.Building" = "Building";
+"Status.Cleaning" = "Cleaning";
+"Status.Failed" = "Failed";
+"Status.Idle" = "Idle";
+"Status.Installing" = "Installing";
+"Status.Launching" = "Launching";
+"Status.Running" = "Running";
+"Status.Stopped" = "Stopped";
+"Status.Stopping" = "Stopping";
+
+"StatusBar.Issue" = "Issue";
+"StatusBar.Working" = "Working";
+
+"StatusMessage.BootingFormat" = "Booting %@...";
+"StatusMessage.DerivedDataCleaned" = "DerivedData cleaned";
+"StatusMessage.ImportedFormat" = "Imported %@";
+"StatusMessage.InstallingFormat" = "Installing %@...";
+"StatusMessage.LaunchedInFormat" = "Launched in %.1fs";
+"StatusMessage.LaunchingFormat" = "Launching %@...";
+"StatusMessage.LogsCleared" = "Logs cleared";
+"StatusMessage.Ready" = "Ready";
+"StatusMessage.RemovingDerivedData" = "Removing DerivedData...";
+"StatusMessage.StartingBuild" = "Starting build...";
+"StatusMessage.StoppingApp" = "Stopping app...";
+
+"Window.Title" = "LaunchPad for iOS";

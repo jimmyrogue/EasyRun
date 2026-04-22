@@ -1,0 +1,122 @@
+"Accessibility.LaunchPadAppRunning" = "LaunchPad 应用正在运行";
+"Accessibility.LaunchPadFailed" = "LaunchPad 运行失败";
+"Accessibility.LaunchPadForIOS" = "LaunchPad for iOS";
+"Accessibility.LaunchPadWorking" = "LaunchPad 正在工作";
+
+"Action.AddProject" = "添加项目";
+"Action.AddProjectEllipsis" = "添加项目…";
+"Action.CleanDerivedData" = "清理 DerivedData";
+"Action.Clear" = "清空";
+"Action.Copy" = "复制";
+"Action.OpenError" = "打开错误";
+"Action.Quit" = "退出";
+"Action.RefreshDevices" = "刷新设备";
+"Action.RemoveFromList" = "从列表移除";
+"Action.Run" = "运行";
+"Action.Scan" = "扫描";
+"Action.ShowMainWindow" = "显示主窗口";
+"Action.Stop" = "停止";
+
+"Configuration.BundleID" = "Bundle ID";
+"Configuration.Configuration" = "配置";
+"Configuration.DerivedData" = "DerivedData";
+"Configuration.Name" = "名称";
+"Configuration.Scheme" = "Scheme";
+"Configuration.Title" = "配置";
+
+"Control.TargetDevice" = "目标设备";
+"Device.NoDevice" = "无设备";
+
+"DeviceGroup.AppleTV" = "Apple TV 模拟器";
+"DeviceGroup.AppleWatch" = "Apple Watch 模拟器";
+"DeviceGroup.Other" = "其他模拟器";
+"DeviceGroup.Physical" = "真机";
+"DeviceGroup.Vision" = "Vision 模拟器";
+"DeviceGroup.iPad" = "iPad 模拟器";
+"DeviceGroup.iPhone" = "iPhone 模拟器";
+
+"Empty.Message" = "选择一个文件夹，LaunchPad 会自动扫描其中的项目和 workspace。";
+"Empty.Title" = "添加 Xcode 项目";
+
+"Error.CommandFailedFormat" = "%@ 执行失败，退出码为 %d\n%@";
+"Error.DropXcodeProject" = "请拖入 .xcodeproj 或 .xcworkspace 文件。";
+"Error.PickDeviceFirst" = "请先选择一个模拟器或设备。";
+"Error.RefusingUnsafeClean" = "拒绝清理 ~/Library/Developer/Xcode/DerivedData/LaunchPad-* 之外的路径。";
+"Error.SchemeRequired" = "Scheme 不能为空。";
+
+"Help.AddProject" = "添加项目";
+"Help.BuildAndRun" = "构建并运行";
+"Help.MoreActions" = "更多操作";
+"Help.RefreshDevices" = "刷新设备";
+"Help.StopApp" = "停止应用";
+"Help.TargetDevice" = "目标设备";
+
+"Log.CleanedPathFormat" = "已清理 %@";
+"Log.PhysicalStopNeedsPID" = "停止真机应用需要启动进程 PID。请再次运行以使用 --terminate-existing，或在设备上手动停止。";
+"Log.RuntimeAttachedFormat" = "已连接 %@ 的运行日志。";
+"Log.RuntimeFailedFormat" = "运行日志启动失败：%@";
+
+"Logs.Build" = "构建日志";
+"Logs.Empty" = "暂无日志输出。";
+"Logs.Runtime" = "运行日志";
+"Logs.SearchPlaceholder" = "搜索日志";
+"Logs.Title" = "日志";
+
+"Menu.BusyActionFormat" = "%@…";
+"Menu.NoDevicesFound" = "未找到设备";
+"Menu.NoProjectsYet" = "暂无项目";
+"Menu.RunProjectFormat" = "运行 %@";
+"Menu.StopProjectFormat" = "停止 %@";
+
+"Message.AllProjectsAlreadyAdded" = "扫描到的项目都已经在列表中。";
+"Message.CouldNotSaveProjectsFormat" = "无法保存项目：%@";
+"Message.DuplicatesSkippedFormat" = "已跳过 %d 个重复项目。";
+"Message.IgnoredDependencyProjectsFormat" = "已忽略 %d 个依赖项目。";
+"Message.LogsCopiedFormat" = "已复制 %@ 的日志。";
+"Message.NoProjectsFound" = "所选文件夹中没有找到 .xcodeproj 或 .xcworkspace。";
+"Message.NoSourceErrorLocation" = "未找到源码错误位置。";
+"Message.ProjectAddedFormat" = "已添加 1 个项目。%@";
+"Message.ProjectNoLongerInList" = "项目已不在列表中。";
+"Message.ProjectRemovedFormat" = "已移除 %@。";
+"Message.ProjectsAddedFormat" = "已添加 %d 个项目。%@";
+"Message.XcodeToolsNotFound" = "未找到 Xcode 命令行工具。请安装 Xcode 并先运行 xcode-select。";
+
+"Notification.BuildFailedBodyFormat" = "%@：点击查看详情。";
+"Notification.BuildFailedTitle" = "构建失败";
+"Notification.FinishedInFormat" = "已在 %.1f 秒内完成。";
+"Notification.LaunchedTitleFormat" = "%@ 已启动";
+
+"Panel.ScanFolder.Message" = "选择一个包含 .xcodeproj 或 .xcworkspace 的文件夹。";
+"Panel.ScanFolder.Title" = "选择要扫描的文件夹";
+
+"Project.SummaryLine" = "%@ · %@ · Scheme：%@";
+
+"Sidebar.NoProjects" = "暂无项目";
+"Sidebar.Projects" = "项目";
+
+"Status.Building" = "构建中";
+"Status.Cleaning" = "清理中";
+"Status.Failed" = "失败";
+"Status.Idle" = "空闲";
+"Status.Installing" = "安装中";
+"Status.Launching" = "启动中";
+"Status.Running" = "运行中";
+"Status.Stopped" = "已停止";
+"Status.Stopping" = "停止中";
+
+"StatusBar.Issue" = "异常";
+"StatusBar.Working" = "处理中";
+
+"StatusMessage.BootingFormat" = "正在启动 %@…";
+"StatusMessage.DerivedDataCleaned" = "DerivedData 已清理";
+"StatusMessage.ImportedFormat" = "已导入 %@";
+"StatusMessage.InstallingFormat" = "正在安装 %@…";
+"StatusMessage.LaunchedInFormat" = "%.1f 秒内启动完成";
+"StatusMessage.LaunchingFormat" = "正在启动 %@…";
+"StatusMessage.LogsCleared" = "日志已清空";
+"StatusMessage.Ready" = "就绪";
+"StatusMessage.RemovingDerivedData" = "正在移除 DerivedData…";
+"StatusMessage.StartingBuild" = "正在开始构建…";
+"StatusMessage.StoppingApp" = "正在停止应用…";
+
+"Window.Title" = "LaunchPad for iOS";
