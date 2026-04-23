@@ -91,6 +91,7 @@ enum DeviceScanner {
                     }
 
                     struct ConnectionProperties: Decodable {
+                        var pairingState: String?
                         var tunnelState: String?
                     }
 
@@ -108,20 +109,29 @@ enum DeviceScanner {
             return response.result.devices.compactMap { device in
                 guard device.hardwareProperties?.platform == "iOS" else { return nil }
 
+                let hardwareUDID = device.hardwareProperties?.udid?.trimmed ?? ""
+                let xcodeDeviceID = hardwareUDID.isEmpty ? device.identifier : hardwareUDID
+                let alternateIdentifiers = [device.identifier, hardwareUDID]
+                    .compactMap { $0 }
+                    .filter { !$0.isEmpty }
+                    .filter { $0 != xcodeDeviceID }
                 let state = device.state ?? device.connectionProperties?.tunnelState ?? "unknown"
                 let tunnelState = device.connectionProperties?.tunnelState ?? ""
+                let isPaired = device.connectionProperties?.pairingState == "paired"
                 let isAvailable = state.caseInsensitiveCompare("available") == .orderedSame
                     || tunnelState.caseInsensitiveCompare("connected") == .orderedSame
+                    || (isPaired && !xcodeDeviceID.trimmed.isEmpty)
 
                 return RunDevice(
-                    udid: device.identifier,
+                    udid: xcodeDeviceID,
                     name: device.deviceProperties?.name
                         ?? device.hardwareProperties?.marketingName
-                        ?? device.identifier,
+                        ?? xcodeDeviceID,
                     kind: .physical,
                     runtime: device.deviceProperties?.osVersionNumber.map { "iOS \($0)" } ?? "iOS",
                     state: state,
-                    isAvailable: isAvailable
+                    isAvailable: isAvailable,
+                    alternateIdentifiers: alternateIdentifiers
                 )
             }
         } catch {

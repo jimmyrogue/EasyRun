@@ -4,6 +4,28 @@ import Foundation
 import SwiftUI
 import UserNotifications
 
+private struct MenuProjectSnapshot: Equatable {
+    var id: UUID
+    var name: String
+    var scheme: String
+    var configuration: String
+    var deviceID: String
+    var deviceName: String
+    var status: ProjectStatus
+    var statusMessage: String
+
+    init(project: ManagedProject) {
+        id = project.id
+        name = project.name
+        scheme = project.scheme
+        configuration = project.configuration
+        deviceID = project.deviceID
+        deviceName = project.deviceName
+        status = project.status
+        statusMessage = project.statusMessage
+    }
+}
+
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelegate {
     private let statusController = StatusBarController()
@@ -45,6 +67,8 @@ private final class StatusBarController: NSObject {
         rebuildMenu()
 
         store.$projects
+            .map { $0.map(MenuProjectSnapshot.init(project:)) }
+            .removeDuplicates()
             .receive(on: RunLoop.main)
             .sink { [weak self] _ in self?.rebuildMenu() }
             .store(in: &cancellables)
@@ -159,7 +183,7 @@ private final class StatusBarController: NSObject {
 
             let groupItem = NSMenuItem(title: group.title, action: nil, keyEquivalent: "")
             groupItem.image = NSImage(systemSymbolName: group.symbolName, accessibilityDescription: nil)
-            groupItem.state = devices.contains { $0.id == project.deviceID } ? .on : .off
+            groupItem.state = devices.contains { $0.matches(project.deviceID) } ? .on : .off
             groupItem.isEnabled = !project.status.isBusy
             groupItem.submenu = deviceGroupMenu(for: devices, project: project, store: store)
             menu.addItem(groupItem)
@@ -184,7 +208,7 @@ private final class StatusBarController: NSObject {
             )
             item.target = token
             item.image = NSImage(systemSymbolName: device.symbolName, accessibilityDescription: nil)
-            item.state = device.id == project.deviceID ? .on : .off
+            item.state = device.matches(project.deviceID) ? .on : .off
             item.isEnabled = device.isAvailable && !project.status.isBusy
             menu.addItem(item)
         }

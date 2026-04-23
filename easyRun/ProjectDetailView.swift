@@ -3,21 +3,22 @@ import SwiftUI
 struct ProjectDetailView: View {
     let project: ManagedProject
     @State private var selectedLog = LogKind.build
+    @State private var logsExpanded = false
     @SceneStorage("configurationExpanded") private var configurationExpanded = false
 
     var body: some View {
         VStack(spacing: 0) {
             ProjectHeaderControls(project: project)
 
-            Divider()
-
-            VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: 12) {
                 ProjectConfigurationView(project: project, isExpanded: $configurationExpanded)
-                ProjectLogPanel(project: project, selectedLog: $selectedLog)
+                ProjectLogPanel(project: project, selectedLog: $selectedLog, isExpanded: $logsExpanded)
                     .layoutPriority(1)
             }
-            .padding(20)
+            .padding(.horizontal, 18)
+            .padding(.vertical, 16)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            .background(Color(nsColor: .textBackgroundColor))
         }
         .navigationTitle(project.name)
     }
@@ -62,15 +63,18 @@ private struct ProjectConfigurationView: View {
             configurationGrid
                 .padding(.top, 10)
         } label: {
-            HStack(spacing: 8) {
+            HStack(spacing: 10) {
+                ProjectSectionIcon(systemName: "slider.horizontal.3")
+
                 Text(L10n.string("Configuration.Title"))
-                    .font(.headline)
+                    .font(.subheadline.weight(.semibold))
 
                 Text("\(project.scheme) · \(project.configuration)")
                     .font(.callout)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
             }
+            .detailSectionHeaderBackground(isActive: isExpanded)
         }
     }
 
@@ -80,13 +84,6 @@ private struct ProjectConfigurationView: View {
                 TextField(L10n.string("Configuration.Name"), text: Binding(
                     get: { project.name },
                     set: { store.updateName(project.id, value: $0) }
-                ))
-            }
-
-            EditableGridRow(title: L10n.string("Configuration.Scheme")) {
-                TextField(L10n.string("Configuration.Scheme"), text: Binding(
-                    get: { project.scheme },
-                    set: { store.updateScheme(project.id, value: $0) }
                 ))
             }
 
@@ -112,6 +109,43 @@ private struct ProjectConfigurationView: View {
             }
         }
         .textFieldStyle(.roundedBorder)
+    }
+}
+
+struct ProjectSectionIcon: View {
+    let systemName: String
+
+    var body: some View {
+        Image(systemName: systemName)
+            .font(.system(size: 12, weight: .semibold))
+            .symbolRenderingMode(.hierarchical)
+            .foregroundStyle(.secondary)
+            .frame(width: 18, height: 18)
+    }
+}
+
+private struct DetailSectionHeaderBackground: ViewModifier {
+    let isActive: Bool
+
+    func body(content: Content) -> some View {
+        content
+            .padding(.horizontal, 9)
+            .padding(.vertical, 5)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(
+                RoundedRectangle(cornerRadius: 5)
+                    .fill(Color(nsColor: .controlBackgroundColor).opacity(isActive ? 0.85 : 0.55))
+            )
+            .overlay {
+                RoundedRectangle(cornerRadius: 5)
+                    .stroke(Color(nsColor: .separatorColor).opacity(isActive ? 0.38 : 0.22), lineWidth: 1)
+            }
+    }
+}
+
+extension View {
+    func detailSectionHeaderBackground(isActive: Bool) -> some View {
+        modifier(DetailSectionHeaderBackground(isActive: isActive))
     }
 }
 

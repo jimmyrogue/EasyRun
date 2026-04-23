@@ -17,7 +17,7 @@ struct ContentView: View {
                 EmptyProjectView()
             }
         }
-        .frame(minWidth: 900, minHeight: 620)
+        .frame(minWidth: 960, idealWidth: 1020, minHeight: 420, idealHeight: 460)
         .toolbar {
             ToolbarItemGroup {
                 Button {

@@ -39,8 +39,12 @@
 "Empty.Title" = "Add an Xcode Project";
 
 "Error.CommandFailedFormat" = "%@ failed with exit code %d\n%@";
+"Error.BundleIDMissingFormat" = "Could not read CFBundleIdentifier from %@.";
 "Error.DropXcodeProject" = "Drop a .xcodeproj or .xcworkspace file.";
+"Error.InfoPlistMissingFormat" = "Could not read Info.plist from %@.";
 "Error.PickDeviceFirst" = "Pick a simulator or device first.";
+"Error.ProductDirectoryMissingFormat" = "Build products directory does not exist: %@";
+"Error.ProductNotFoundFormat" = "No .app product found in %@.";
 "Error.RefusingUnsafeClean" = "Refusing to clean a path outside ~/Library/Developer/Xcode/DerivedData/LaunchPad-*.";
 "Error.SchemeRequired" = "Scheme is required.";
 
@@ -52,9 +56,16 @@
 "Help.TargetDevice" = "Target device";
 
 "Log.CleanedPathFormat" = "Cleaned %@";
+"Log.DevicePIDFormat" = "Device app PID: %d";
+"Log.PhaseFailedFormat" = "[%.1fs] %@ failed.";
+"Log.PhaseFinishedFormat" = "[%.1fs] %@ finished.";
+"Log.PhaseStartedFormat" = "Starting %@...";
 "Log.PhysicalStopNeedsPID" = "Physical-device stop needs the launch PID. Use Run again with --terminate-existing, or stop it on the device.";
-"Log.RuntimeAttachedFormat" = "Runtime log attached for %@.";
+"Log.ProductResolvedFormat" = "Resolved product: %@\nBundle ID: %@\nExecutable: %@";
+"Log.ProductResolverFallbackFormat" = "Product lookup needed build settings fallback: %@";
+"Log.RuntimeAttachedFormat" = "Runtime log attached: %@.";
 "Log.RuntimeFailedFormat" = "Runtime log failed to start: %@";
+"Log.RuntimeProcessExitedFormat" = "%@ exited with status %d.";
 
 "Logs.Build" = "Build Log";
 "Logs.Empty" = "No log output yet.";
@@ -90,6 +101,17 @@
 "Panel.ScanFolder.Title" = "Choose a Folder to Scan";
 
 "Project.SummaryLine" = "%@ · %@ · Scheme: %@";
+
+"RunPhase.BootSimulator" = "Boot Simulator";
+"RunPhase.Build" = "Build";
+"RunPhase.Install" = "Install";
+"RunPhase.LaunchAttachLogs" = "Launch and Attach Logs";
+"RunPhase.ResolveProduct" = "Resolve Product";
+
+"RuntimeLogMode.DeviceConsole" = "Device Console";
+"RuntimeLogMode.SimulatorConsole" = "Simulator Console";
+"RuntimeLogMode.SimulatorUnifiedLog" = "Simulator Unified Log";
+"RuntimeLogMode.Unavailable" = "Runtime Log Unavailable";
 
 "Sidebar.NoProjects" = "No Projects";
 "Sidebar.Projects" = "Projects";

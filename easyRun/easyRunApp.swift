@@ -10,6 +10,7 @@ struct easyRunApp: App {
             ContentView()
                 .environmentObject(store)
         }
+        .defaultSize(width: 1020, height: 460)
         .commands {
             CommandGroup(replacing: .newItem) {
                 Button(L10n.string("Action.AddProjectEllipsis")) {

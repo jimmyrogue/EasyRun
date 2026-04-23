@@ -4,6 +4,34 @@ import Foundation
 import UniformTypeIdentifiers
 import UserNotifications
 
+private enum BufferedLogKind: Hashable {
+    case build
+    case runtime
+}
+
+private struct BufferedLogKey: Hashable {
+    var projectID: UUID
+    var kind: BufferedLogKind
+}
+
+private struct BuildProductCacheKey: Hashable {
+    var projectID: UUID
+    var scheme: String
+    var configuration: String
+    var buildFolder: String
+    var derivedDataPath: String
+
+    init(project: ManagedProject) {
+        projectID = project.id
+        scheme = project.scheme
+        configuration = project.configuration
+        buildFolder = project.deviceKind == .simulator
+            ? project.devicePlatform.simulatorBuildFolder
+            : project.devicePlatform.physicalBuildFolder
+        derivedDataPath = project.resolvedDerivedDataURL.path
+    }
+}
+
 @MainActor
 final class LaunchPadStore: ObservableObject {
     static let shared = LaunchPadStore()
@@ -15,9 +43,13 @@ final class LaunchPadStore: ObservableObject {
     @Published var isDropTargeted = false
 
     private var activeProcesses: [UUID: Process] = [:]
-    private var runtimeLogProcesses: [UUID: Process] = [:]
+    private let runtimeLogs = RuntimeLogController()
+    private var productInfoCache: [BuildProductCacheKey: BuildProductInfo] = [:]
+    private var pendingLogBuffers: [BufferedLogKey: String] = [:]
+    private var logFlushTasks: [BufferedLogKey: Task<Void, Never>] = [:]
     private let fileManager = FileManager.default
-    private let maxLogCharacters = 250_000
+    private let maxLogCharacters = 80_000
+    private let logFlushInterval: UInt64 = 400_000_000
 
     var isBusy: Bool {
         projects.contains { $0.status.isBusy }
@@ -118,6 +150,8 @@ final class LaunchPadStore: ObservableObject {
 
         let removed = projects[index]
         stopRuntimeLog(for: removed.id)
+        discardBufferedLogs(for: removed.id)
+        invalidateProductCache(for: removed.id)
         activeProcesses[removed.id]?.terminate()
         activeProcesses[removed.id] = nil
 
@@ -125,6 +159,24 @@ final class LaunchPadStore: ObservableObject {
         updatedProjects.remove(at: index)
         projects = updatedProjects
         globalMessage = L10n.format("Message.ProjectRemovedFormat", removed.name)
+        save()
+    }
+
+    func moveProjects(from source: IndexSet, to destination: Int) {
+        let sourceIndexes = source.filter { projects.indices.contains($0) }.sorted()
+        guard !sourceIndexes.isEmpty else { return }
+
+        var updatedProjects = projects
+        let movedProjects = sourceIndexes.map { updatedProjects[$0] }
+        for index in sourceIndexes.reversed() {
+            updatedProjects.remove(at: index)
+        }
+
+        let removedBeforeDestination = sourceIndexes.filter { $0 < destination }.count
+        let insertionIndex = max(0, min(destination - removedBeforeDestination, updatedProjects.count))
+        updatedProjects.insert(contentsOf: movedProjects, at: insertionIndex)
+
+        projects = updatedProjects
         save()
     }
 
@@ -139,18 +191,47 @@ final class LaunchPadStore: ObservableObject {
     }
 
     func updateScheme(_ id: UUID, value: String) {
+        invalidateProductCache(for: id)
         updateAndSave(id) { $0.scheme = value }
     }
 
+    func refreshSchemesIfNeeded(for id: UUID) async {
+        guard let project = projects.first(where: { $0.id == id }),
+              (project.schemes ?? []).isEmpty else {
+            return
+        }
+
+        await refreshSchemes(for: project)
+    }
+
+    func refreshSchemes(for project: ManagedProject) async {
+        do {
+            let schemes = try await ProjectInspector.schemes(for: project)
+            guard !schemes.isEmpty else { return }
+
+            updateAndSave(project.id) { item in
+                item.schemes = schemes
+                if item.scheme.trimmed.isEmpty {
+                    item.scheme = schemes[0]
+                }
+            }
+        } catch {
+            // Keep the existing scheme available. Some projects cannot be listed until dependencies are resolved.
+        }
+    }
+
     func updateConfiguration(_ id: UUID, value: String) {
+        invalidateProductCache(for: id)
         updateAndSave(id) { $0.configuration = value }
     }
 
     func updateBundleID(_ id: UUID, value: String) {
+        invalidateProductCache(for: id)
         updateAndSave(id) { $0.bundleID = value }
     }
 
     func updateDerivedDataPath(_ id: UUID, value: String) {
+        invalidateProductCache(for: id)
         updateAndSave(id) { $0.derivedDataPath = value }
     }
 
@@ -159,7 +240,8 @@ final class LaunchPadStore: ObservableObject {
     }
 
     func selectDevice(projectID: UUID, deviceID: String) {
-        guard let device = devices.first(where: { $0.id == deviceID }) else { return }
+        guard let device = devices.first(where: { $0.matches(deviceID) }) else { return }
+        invalidateProductCache(for: projectID)
         updateAndSave(projectID) { project in
             project.deviceID = device.udid
             project.deviceName = device.name
@@ -169,6 +251,7 @@ final class LaunchPadStore: ObservableObject {
     }
 
     func clearLogs(for project: ManagedProject) {
+        discardBufferedLogs(for: project.id)
         updateProject(project.id) {
             $0.buildLog = ""
             $0.runtimeLog = ""
@@ -177,20 +260,22 @@ final class LaunchPadStore: ObservableObject {
     }
 
     func copyLogs(for project: ManagedProject) {
+        flushLogs(for: project.id)
+        guard let currentProject = projects.first(where: { $0.id == project.id }) else { return }
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(
             """
-            # \(project.name)
+            # \(currentProject.name)
 
             ## \(L10n.string("Logs.Build"))
-            \(project.buildLog)
+            \(currentProject.buildLog)
 
             ## \(L10n.string("Logs.Runtime"))
-            \(project.runtimeLog)
+            \(currentProject.runtimeLog)
             """,
             forType: .string
         )
-        globalMessage = L10n.format("Message.LogsCopiedFormat", project.name)
+        globalMessage = L10n.format("Message.LogsCopiedFormat", currentProject.name)
     }
 
     func run(_ project: ManagedProject) async {
@@ -205,6 +290,7 @@ final class LaunchPadStore: ObservableObject {
         }
 
         let start = Date()
+        let cacheKey = BuildProductCacheKey(project: snapshot)
         stopRuntimeLog(for: snapshot.id)
 
         updateProject(snapshot.id) {
@@ -217,43 +303,57 @@ final class LaunchPadStore: ObservableObject {
 
         do {
             if snapshot.deviceKind == .simulator {
-                try await bootSimulator(for: snapshot)
+                try await timedPhase(L10n.string("RunPhase.BootSimulator"), projectID: snapshot.id) {
+                    try await bootSimulator(for: snapshot)
+                }
             }
 
-            let buildSettings = try await showBuildSettings(for: snapshot)
-            let bundleID = ProjectInspector.bundleIDFromBuildSettings(buildSettings.output) ?? snapshot.bundleID
-            if bundleID != snapshot.bundleID {
-                updateAndSave(snapshot.id) { $0.bundleID = bundleID }
+            try await timedPhase(L10n.string("RunPhase.Build"), projectID: snapshot.id) {
+                _ = try await xcodebuildBuild(for: snapshot)
+                activeProcesses[snapshot.id] = nil
             }
 
-            _ = try await xcodebuildBuild(for: snapshot)
-            let appURL = ProjectInspector.productPath(for: snapshot, output: buildSettings.output)
+            flushLogs(for: snapshot.id)
+
+            let productInfo = try await timedPhase(L10n.string("RunPhase.ResolveProduct"), projectID: snapshot.id) {
+                try await resolveBuildProduct(for: snapshot, cacheKey: cacheKey)
+            }
+            if productInfo.bundleID != snapshot.bundleID {
+                updateAndSave(snapshot.id) { $0.bundleID = productInfo.bundleID }
+            }
 
             updateProject(snapshot.id) {
                 $0.status = .installing
-                $0.statusMessage = L10n.format("StatusMessage.InstallingFormat", appURL.lastPathComponent)
+                $0.statusMessage = L10n.format("StatusMessage.InstallingFormat", productInfo.appURL.lastPathComponent)
             }
 
             switch snapshot.deviceKind {
             case .simulator:
-                try await installOnSimulator(project: snapshot, appURL: appURL)
+                try await timedPhase(L10n.string("RunPhase.Install"), projectID: snapshot.id) {
+                    try await installOnSimulator(project: snapshot, appURL: productInfo.appURL)
+                }
                 updateProject(snapshot.id) {
                     $0.status = .launching
-                    $0.statusMessage = L10n.format("StatusMessage.LaunchingFormat", bundleID)
+                    $0.statusMessage = L10n.format("StatusMessage.LaunchingFormat", productInfo.bundleID)
                 }
-                try await launchOnSimulator(project: snapshot, bundleID: bundleID)
-                startRuntimeLog(for: snapshot, bundleID: bundleID)
+                try await timedPhase(L10n.string("RunPhase.LaunchAttachLogs"), projectID: snapshot.id) {
+                    try startSimulatorRuntimeLogs(project: snapshot, product: productInfo)
+                }
             case .physical:
-                try await installOnDevice(project: snapshot, appURL: appURL)
+                try await timedPhase(L10n.string("RunPhase.Install"), projectID: snapshot.id) {
+                    try await installOnDevice(project: snapshot, appURL: productInfo.appURL)
+                }
                 updateProject(snapshot.id) {
                     $0.status = .launching
-                    $0.statusMessage = L10n.format("StatusMessage.LaunchingFormat", bundleID)
+                    $0.statusMessage = L10n.format("StatusMessage.LaunchingFormat", productInfo.bundleID)
                 }
-                let pid = try await launchOnDevice(project: snapshot, bundleID: bundleID)
-                updateAndSave(snapshot.id) { $0.lastDevicePID = pid }
+                try await timedPhase(L10n.string("RunPhase.LaunchAttachLogs"), projectID: snapshot.id) {
+                    try startDeviceRuntimeLogs(project: snapshot, product: productInfo)
+                }
             }
 
             let duration = Date().timeIntervalSince(start)
+            flushLogs(for: snapshot.id)
             updateAndSave(snapshot.id) {
                 $0.status = .running
                 $0.statusMessage = L10n.format("StatusMessage.LaunchedInFormat", duration)
@@ -265,6 +365,9 @@ final class LaunchPadStore: ObservableObject {
                 body: L10n.format("Notification.FinishedInFormat", duration)
             )
         } catch {
+            activeProcesses[snapshot.id]?.terminate()
+            activeProcesses[snapshot.id] = nil
+            flushLogs(for: snapshot.id)
             let message = error.localizedDescription
             markFailed(snapshot.id, message: message)
             notify(
@@ -279,6 +382,7 @@ final class LaunchPadStore: ObservableObject {
         activeProcesses[project.id]?.terminate()
         activeProcesses[project.id] = nil
         stopRuntimeLog(for: project.id)
+        flushLogs(for: project.id)
 
         updateProject(project.id) {
             $0.status = .stopping
@@ -324,6 +428,8 @@ final class LaunchPadStore: ObservableObject {
         activeProcesses[project.id]?.terminate()
         activeProcesses[project.id] = nil
         stopRuntimeLog(for: project.id)
+        flushLogs(for: project.id)
+        invalidateProductCache(for: project.id)
 
         updateProject(project.id) {
             $0.status = .cleaning
@@ -352,8 +458,9 @@ final class LaunchPadStore: ObservableObject {
             updateAndSave(project.id) {
                 $0.status = .idle
                 $0.statusMessage = L10n.string("StatusMessage.DerivedDataCleaned")
-                $0.buildLog += "\n\(L10n.format("Log.CleanedPathFormat", project.resolvedDerivedDataURL.path))\n"
             }
+            appendBuildLog(project.id, "\n\(L10n.format("Log.CleanedPathFormat", project.resolvedDerivedDataURL.path))\n")
+            flushLog(BufferedLogKey(projectID: project.id, kind: .build))
         } catch {
             markFailed(project.id, message: error.localizedDescription)
         }
@@ -374,7 +481,9 @@ final class LaunchPadStore: ObservableObject {
     }
 
     func openFirstError(for project: ManagedProject) {
-        guard let match = firstErrorLocation(in: project.buildLog) else {
+        flushLogs(for: project.id)
+        guard let currentProject = projects.first(where: { $0.id == project.id }),
+              let match = firstErrorLocation(in: currentProject.buildLog) else {
             globalMessage = L10n.string("Message.NoSourceErrorLocation")
             return
         }
@@ -385,6 +494,95 @@ final class LaunchPadStore: ObservableObject {
                 ["-l", "\(match.line)", match.file],
                 checkExit: false
             )
+        }
+    }
+
+    private func timedPhase<T>(
+        _ name: String,
+        projectID: UUID,
+        operation: () async throws -> T
+    ) async throws -> T {
+        let startedAt = Date()
+        appendBuildLog(projectID, L10n.format("Log.PhaseStartedFormat", name) + "\n")
+        do {
+            let result = try await operation()
+            let timing = RunPhaseTiming(name: name, startedAt: startedAt, endedAt: Date())
+            appendBuildLog(projectID, L10n.format("Log.PhaseFinishedFormat", timing.duration, timing.name) + "\n")
+            return result
+        } catch {
+            let timing = RunPhaseTiming(name: name, startedAt: startedAt, endedAt: Date())
+            appendBuildLog(projectID, L10n.format("Log.PhaseFailedFormat", timing.duration, timing.name) + "\n")
+            throw error
+        }
+    }
+
+    private func resolveBuildProduct(for project: ManagedProject, cacheKey: BuildProductCacheKey) async throws -> BuildProductInfo {
+        do {
+            let info = try await BuildProductResolver.resolve(project: project, cached: productInfoCache[cacheKey])
+            productInfoCache[cacheKey] = info
+            appendBuildLog(project.id, L10n.format("Log.ProductResolvedFormat", info.appURL.path, info.bundleID, info.executableName) + "\n")
+            return info
+        } catch {
+            appendBuildLog(project.id, L10n.format("Log.ProductResolverFallbackFormat", error.localizedDescription) + "\n")
+            let buildSettings = try await showBuildSettings(for: project)
+            let appURL = ProjectInspector.productPath(for: project, output: buildSettings.output)
+            let fallbackBundleID = ProjectInspector.bundleIDFromBuildSettings(buildSettings.output) ?? project.bundleID
+            var info = try BuildProductResolver.info(
+                for: appURL,
+                buildFolder: buildFolder(for: project),
+                fallbackBundleID: fallbackBundleID
+            )
+            if let executableName = ProjectInspector.executableNameFromBuildSettings(buildSettings.output),
+               !executableName.isEmpty {
+                info.executableName = executableName
+            }
+            productInfoCache[cacheKey] = info
+            appendBuildLog(project.id, L10n.format("Log.ProductResolvedFormat", info.appURL.path, info.bundleID, info.executableName) + "\n")
+            return info
+        }
+    }
+
+    private func buildFolder(for project: ManagedProject) -> String {
+        project.deviceKind == .simulator
+            ? project.devicePlatform.simulatorBuildFolder
+            : project.devicePlatform.physicalBuildFolder
+    }
+
+    private func startSimulatorRuntimeLogs(project: ManagedProject, product: BuildProductInfo) throws {
+        try runtimeLogs.startSimulatorLogs(
+            project: project,
+            product: product,
+            onOutput: { [weak self] chunk in
+                self?.appendRuntimeLog(project.id, chunk)
+            }
+        )
+    }
+
+    private func startDeviceRuntimeLogs(project: ManagedProject, product: BuildProductInfo) throws {
+        try runtimeLogs.startDeviceConsole(
+            project: project,
+            product: product,
+            onOutput: { [weak self] chunk in
+                self?.appendRuntimeLog(project.id, chunk)
+            },
+            onJSONOutputReady: { [weak self] outputURL in
+                self?.scheduleDevicePIDRead(projectID: project.id, outputURL: outputURL)
+            }
+        )
+    }
+
+    private func scheduleDevicePIDRead(projectID: UUID, outputURL: URL) {
+        Task { @MainActor [weak self] in
+            let delays: [UInt64] = [300_000_000, 1_000_000_000, 2_000_000_000]
+            for delay in delays {
+                try? await Task.sleep(nanoseconds: delay)
+                guard let self else { return }
+                if let pid = self.parsePID(from: outputURL) {
+                    self.updateAndSave(projectID) { $0.lastDevicePID = pid }
+                    self.appendRuntimeLog(projectID, L10n.format("Log.DevicePIDFormat", pid) + "\n")
+                    return
+                }
+            }
         }
     }
 
@@ -416,26 +614,32 @@ final class LaunchPadStore: ObservableObject {
                 "-scheme", project.scheme,
                 "-configuration", project.configuration,
                 "-destination", ProjectInspector.destination(for: project),
+                "-destination-timeout", "10",
                 "-derivedDataPath", project.resolvedDerivedDataURL.path
             ]
 
         return try await ShellCommand.run(
             "/usr/bin/xcodebuild",
             args,
-            checkExit: false,
-            onOutput: { [weak self] chunk in self?.appendBuildLog(project.id, chunk) }
+            checkExit: true
         )
     }
 
     private func xcodebuildBuild(for project: ManagedProject) async throws -> ShellResult {
-        let args = ["build"]
+        var args = ["build"]
             + ProjectInspector.projectArguments(for: project)
             + [
                 "-scheme", project.scheme,
                 "-configuration", project.configuration,
                 "-destination", ProjectInspector.destination(for: project),
-                "-derivedDataPath", project.resolvedDerivedDataURL.path
+                "-destination-timeout", "10",
+                "-derivedDataPath", project.resolvedDerivedDataURL.path,
+                "-parallelizeTargets",
+                "-showBuildTimingSummary"
             ]
+        if project.configuration.caseInsensitiveCompare("Debug") == .orderedSame {
+            args.append("ONLY_ACTIVE_ARCH=YES")
+        }
 
         return try await ShellCommand.run(
             "/usr/bin/xcodebuild",
@@ -457,15 +661,6 @@ final class LaunchPadStore: ObservableObject {
         )
     }
 
-    private func launchOnSimulator(project: ManagedProject, bundleID: String) async throws {
-        _ = try await ShellCommand.run(
-            "/usr/bin/xcrun",
-            ["simctl", "launch", project.deviceID, bundleID],
-            checkExit: true,
-            onOutput: { [weak self] chunk in self?.appendBuildLog(project.id, chunk) }
-        )
-    }
-
     private func installOnDevice(project: ManagedProject, appURL: URL) async throws {
         _ = try await ShellCommand.run(
             "/usr/bin/xcrun",
@@ -475,79 +670,70 @@ final class LaunchPadStore: ObservableObject {
         )
     }
 
-    private func launchOnDevice(project: ManagedProject, bundleID: String) async throws -> Int? {
-        let outputURL = FileManager.default.temporaryDirectory
-            .appendingPathComponent("easyrun-launch-\(UUID().uuidString).json")
-        defer { try? FileManager.default.removeItem(at: outputURL) }
-
-        _ = try await ShellCommand.run(
-            "/usr/bin/xcrun",
-            [
-                "devicectl", "device", "process", "launch",
-                "--device", project.deviceID,
-                "--terminate-existing",
-                "--json-output", outputURL.path,
-                bundleID
-            ],
-            checkExit: true,
-            onOutput: { [weak self] chunk in self?.appendBuildLog(project.id, chunk) }
-        )
-
-        return parsePID(from: outputURL)
-    }
-
-    private func startRuntimeLog(for project: ManagedProject, bundleID: String) {
-        stopRuntimeLog(for: project.id)
-
-        let process = Process()
-        let pipe = Pipe()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/xcrun")
-        process.arguments = [
-            "simctl", "spawn", project.deviceID,
-            "log", "stream",
-            "--style", "compact",
-            "--predicate", "subsystem == \"\(bundleID)\" OR processImagePath CONTAINS \"\(project.scheme)\""
-        ]
-        process.standardOutput = pipe
-        process.standardError = pipe
-        let projectID = project.id
-        pipe.fileHandleForReading.readabilityHandler = { handle in
-            let data = handle.availableData
-            guard !data.isEmpty else { return }
-            let chunk = String(data: data, encoding: .utf8) ?? String(decoding: data, as: UTF8.self)
-            Task { @MainActor in
-                LaunchPadStore.shared.appendRuntimeLog(projectID, chunk)
-            }
-        }
-
-        do {
-            try process.run()
-            runtimeLogProcesses[project.id] = process
-            appendRuntimeLog(project.id, L10n.format("Log.RuntimeAttachedFormat", bundleID) + "\n")
-        } catch {
-            appendRuntimeLog(project.id, L10n.format("Log.RuntimeFailedFormat", error.localizedDescription) + "\n")
-        }
-    }
-
     private func stopRuntimeLog(for id: UUID) {
-        runtimeLogProcesses[id]?.terminate()
-        runtimeLogProcesses[id] = nil
+        runtimeLogs.stop(projectID: id)
+        flushLog(BufferedLogKey(projectID: id, kind: .runtime))
     }
 
     private func appendBuildLog(_ id: UUID, _ chunk: String) {
-        appendLog(id, keyPath: \.buildLog, chunk: chunk)
+        enqueueLog(id, kind: .build, chunk: chunk)
     }
 
     private func appendRuntimeLog(_ id: UUID, _ chunk: String) {
-        appendLog(id, keyPath: \.runtimeLog, chunk: chunk)
+        enqueueLog(id, kind: .runtime, chunk: chunk)
     }
 
-    private func appendLog(_ id: UUID, keyPath: WritableKeyPath<ManagedProject, String>, chunk: String) {
+    private func enqueueLog(_ id: UUID, kind: BufferedLogKind, chunk: String) {
+        guard !chunk.isEmpty else { return }
+
+        let key = BufferedLogKey(projectID: id, kind: kind)
+        pendingLogBuffers[key, default: ""] += chunk
+
+        guard logFlushTasks[key] == nil else { return }
+        let delay = logFlushInterval
+        logFlushTasks[key] = Task { @MainActor [weak self] in
+            try? await Task.sleep(nanoseconds: delay)
+            self?.flushLog(key)
+        }
+    }
+
+    private func flushLogs(for id: UUID) {
+        flushLog(BufferedLogKey(projectID: id, kind: .build))
+        flushLog(BufferedLogKey(projectID: id, kind: .runtime))
+    }
+
+    private func flushLog(_ key: BufferedLogKey) {
+        logFlushTasks[key]?.cancel()
+        logFlushTasks[key] = nil
+
+        guard let chunk = pendingLogBuffers.removeValue(forKey: key), !chunk.isEmpty else { return }
+        switch key.kind {
+        case .build:
+            appendLogNow(key.projectID, keyPath: \.buildLog, chunk: chunk)
+        case .runtime:
+            appendLogNow(key.projectID, keyPath: \.runtimeLog, chunk: chunk)
+        }
+    }
+
+    private func discardBufferedLogs(for id: UUID) {
+        let keys = Set(pendingLogBuffers.keys).union(logFlushTasks.keys).filter { $0.projectID == id }
+        for key in keys {
+            logFlushTasks[key]?.cancel()
+            logFlushTasks[key] = nil
+            pendingLogBuffers[key] = nil
+        }
+    }
+
+    private func invalidateProductCache(for id: UUID) {
+        for key in productInfoCache.keys where key.projectID == id {
+            productInfoCache[key] = nil
+        }
+    }
+
+    private func appendLogNow(_ id: UUID, keyPath: WritableKeyPath<ManagedProject, String>, chunk: String) {
         updateProject(id) { project in
-            project[keyPath: keyPath] += chunk
-            if project[keyPath: keyPath].count > maxLogCharacters {
-                project[keyPath: keyPath].removeFirst(project[keyPath: keyPath].count - maxLogCharacters)
-            }
+            project[keyPath: keyPath].append(chunk)
+            project[keyPath: keyPath] = limitedLog(project[keyPath: keyPath])
         }
     }
 
@@ -556,15 +742,22 @@ final class LaunchPadStore: ObservableObject {
             $0.status = .failed
             $0.statusMessage = message
             $0.isExpanded = true
-            $0.buildLog += "\n\(message)\n"
         }
+        appendBuildLog(id, "\n\(message)\n")
+        flushLog(BufferedLogKey(projectID: id, kind: .build))
+    }
+
+    private func limitedLog(_ value: String) -> String {
+        guard value.count > maxLogCharacters else { return value }
+        return String(value.suffix(maxLogCharacters))
     }
 
     private func repairMissingDevices() {
         guard !devices.isEmpty else { return }
         var updatedProjects = projects
         for index in updatedProjects.indices {
-            if let selected = devices.first(where: { $0.id == updatedProjects[index].deviceID }) {
+            if let selected = devices.first(where: { $0.matches(updatedProjects[index].deviceID) }) {
+                updatedProjects[index].deviceID = selected.udid
                 updatedProjects[index].deviceName = selected.name
                 updatedProjects[index].deviceKind = selected.kind
                 updatedProjects[index].deviceRuntime = selected.runtime
@@ -701,8 +894,11 @@ final class LaunchPadStore: ObservableObject {
             var copy = project
             copy.status = .idle
             copy.statusMessage = L10n.string("StatusMessage.Ready")
+            copy.buildLog = ""
+            copy.runtimeLog = ""
             copy.logSearch = ""
             copy.isExpanded = false
+            copy.lastDevicePID = nil
             return copy
         }
 
@@ -711,8 +907,8 @@ final class LaunchPadStore: ObservableObject {
                 "Message.IgnoredDependencyProjectsFormat",
                 decoded.projects.count - filteredProjects.count
             )
-            save()
         }
+        save()
     }
 
     private func save() {

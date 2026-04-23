@@ -180,8 +180,13 @@ struct RunDevice: Identifiable, Codable, Equatable {
     var runtime: String
     var state: String
     var isAvailable: Bool
+    var alternateIdentifiers: [String]? = nil
 
     var id: String { udid }
+
+    func matches(_ identifier: String) -> Bool {
+        identifier == udid || (alternateIdentifiers ?? []).contains(identifier)
+    }
 
     var platform: DevicePlatform {
         DevicePlatform.infer(runtime: runtime, name: name)
@@ -208,7 +213,17 @@ struct RunDevice: Identifiable, Codable, Equatable {
         group.symbolName
     }
 
+    var shortIdentifier: String {
+        guard udid.count > 14 else { return udid }
+        return "\(udid.prefix(8))...\(udid.suffix(4))"
+    }
+
     var displayName: String {
+        if kind == .physical {
+            let details = [runtime, state, shortIdentifier].filter { !$0.trimmed.isEmpty }
+            return details.isEmpty ? name : "\(name) · \(details.joined(separator: " · "))"
+        }
+
         let suffix = runtime.isEmpty ? state : "\(runtime) · \(state)"
         return suffix.isEmpty ? name : "\(name) · \(suffix)"
     }
@@ -220,6 +235,7 @@ struct ManagedProject: Identifiable, Codable, Equatable {
     var path: String
     var kind: ProjectKind
     var scheme: String
+    var schemes: [String]?
     var configuration = "Debug"
     var deviceID: String
     var deviceName: String
@@ -237,6 +253,25 @@ struct ManagedProject: Identifiable, Codable, Equatable {
     var logSearch = ""
     var isExpanded = false
     var lastDevicePID: Int?
+
+    private enum CodingKeys: String, CodingKey {
+        case id
+        case name
+        case path
+        case kind
+        case scheme
+        case schemes
+        case configuration
+        case deviceID
+        case deviceName
+        case deviceKind
+        case deviceRuntime
+        case bundleID
+        case derivedDataPath
+        case createdAt
+        case lastRunAt
+        case lastRunDuration
+    }
 
     var projectURL: URL {
         URL(fileURLWithPath: path)
@@ -258,6 +293,20 @@ struct ManagedProject: Identifiable, Codable, Equatable {
 
     var summaryLine: String {
         L10n.format("Project.SummaryLine", displayDeviceName, configuration, scheme)
+    }
+
+    var availableSchemes: [String] {
+        var names = schemes ?? []
+        if !scheme.trimmed.isEmpty, !names.contains(scheme) {
+            names.insert(scheme, at: 0)
+        }
+        var seen = Set<String>()
+        return names.compactMap { name in
+            let trimmedName = name.trimmed
+            guard !trimmedName.isEmpty, !seen.contains(trimmedName) else { return nil }
+            seen.insert(trimmedName)
+            return trimmedName
+        }
     }
 }
 

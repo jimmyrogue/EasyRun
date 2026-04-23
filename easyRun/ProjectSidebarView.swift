@@ -11,6 +11,9 @@ struct ProjectSidebarView: View {
                     ProjectSidebarRow(project: project)
                         .tag(project.id.uuidString)
                 }
+                .onMove { source, destination in
+                    store.moveProjects(from: source, to: destination)
+                }
             }
         }
         .listStyle(.sidebar)
@@ -27,15 +30,18 @@ private struct ProjectSidebarRow: View {
     let project: ManagedProject
 
     var body: some View {
-        HStack(spacing: 10) {
+        HStack(spacing: 8) {
             Image(systemName: statusSymbol)
-                .font(.system(size: 12, weight: .semibold))
-                .foregroundStyle(project.status.color)
+                .font(.system(size: 11, weight: .semibold))
+                .symbolRenderingMode(.hierarchical)
+                .foregroundStyle(statusColor)
                 .frame(width: 16)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(project.name)
+                    .font(.system(size: 13, weight: .medium))
                     .lineLimit(1)
+                    .truncationMode(.middle)
 
                 HStack(spacing: 5) {
                     Text(project.displayDeviceName)
@@ -48,13 +54,13 @@ private struct ProjectSidebarRow: View {
                 .foregroundStyle(.secondary)
             }
         }
-        .padding(.vertical, 2)
+        .padding(.vertical, 3)
     }
 
     private var statusSymbol: String {
         switch project.status {
         case .running:
-            return "play.circle.fill"
+            return "play.fill"
         case .failed:
             return "xmark.octagon.fill"
         case .building, .installing, .launching, .stopping, .cleaning:
@@ -63,6 +69,19 @@ private struct ProjectSidebarRow: View {
             return "stop.circle"
         case .idle:
             return "circle"
+        }
+    }
+
+    private var statusColor: Color {
+        switch project.status {
+        case .running:
+            return .accentColor
+        case .failed:
+            return .red
+        case .building, .installing, .launching, .stopping, .cleaning:
+            return .orange
+        case .stopped, .idle:
+            return .secondary
         }
     }
 }

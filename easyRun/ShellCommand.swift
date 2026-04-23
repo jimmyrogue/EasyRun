@@ -24,6 +24,60 @@ enum ShellCommandError: LocalizedError {
 }
 
 enum ShellCommand {
+    @discardableResult
+    static func startStreaming(
+        _ executable: String,
+        _ arguments: [String],
+        currentDirectory: URL? = nil,
+        environment: [String: String]? = nil,
+        onOutput: @escaping @MainActor (String) -> Void = { _ in },
+        onTermination: @escaping @MainActor (Int32) -> Void = { _ in }
+    ) throws -> Process {
+        let process = Process()
+        let pipe = Pipe()
+
+        @Sendable func append(_ data: Data) {
+            guard !data.isEmpty else { return }
+            let chunk = String(data: data, encoding: .utf8) ?? String(decoding: data, as: UTF8.self)
+            Task { @MainActor in
+                onOutput(chunk)
+            }
+        }
+
+        process.executableURL = URL(fileURLWithPath: executable)
+        process.arguments = arguments
+        process.currentDirectoryURL = currentDirectory
+
+        if let environment {
+            var merged = ProcessInfo.processInfo.environment
+            environment.forEach { merged[$0.key] = $0.value }
+            process.environment = merged
+        }
+
+        process.standardOutput = pipe
+        process.standardError = pipe
+
+        pipe.fileHandleForReading.readabilityHandler = { handle in
+            append(handle.availableData)
+        }
+
+        process.terminationHandler = { terminatedProcess in
+            pipe.fileHandleForReading.readabilityHandler = nil
+            append(pipe.fileHandleForReading.readDataToEndOfFile())
+            Task { @MainActor in
+                onTermination(terminatedProcess.terminationStatus)
+            }
+        }
+
+        do {
+            try process.run()
+            return process
+        } catch {
+            pipe.fileHandleForReading.readabilityHandler = nil
+            throw ShellCommandError.launchFailed(error.localizedDescription)
+        }
+    }
+
     static func run(
         _ executable: String,
         _ arguments: [String],

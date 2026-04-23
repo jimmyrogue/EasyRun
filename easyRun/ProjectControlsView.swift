@@ -5,32 +5,64 @@ struct ProjectHeaderControls: View {
     let project: ManagedProject
 
     var body: some View {
-        HStack(alignment: .center, spacing: 12) {
-            VStack(alignment: .leading, spacing: 5) {
-                Text(project.name)
-                    .font(.title2.weight(.semibold))
-                    .lineLimit(1)
-                    .truncationMode(.middle)
-
+        VStack(spacing: 0) {
+            HStack(alignment: .center, spacing: 10) {
                 ProjectStatusSummary(project: project)
+                    .frame(width: 116, alignment: .leading)
+                    .layoutPriority(1)
+
+                Spacer(minLength: 8)
+
+                HStack(spacing: 8) {
+                    ProjectSchemePicker(project: project)
+                        .frame(width: 170)
+
+                    DevicePicker(project: project)
+                        .frame(width: 210)
+
+                    Divider()
+                        .frame(height: 18)
+                        .padding(.horizontal, 2)
+
+                    ProjectRunButton(project: project)
+
+                    ProjectMoreMenu(project: project)
+                }
+                .layoutPriority(2)
             }
-            .frame(minWidth: 150, maxWidth: .infinity, alignment: .leading)
-            .layoutPriority(1)
+            .padding(.horizontal, 16)
+            .frame(height: 48)
 
-            Spacer(minLength: 10)
-
-            HStack(spacing: 8) {
-                DevicePicker(project: project)
-                    .frame(width: 220)
-
-                ProjectRunButton(project: project)
-
-                ProjectMoreMenu(project: project)
-            }
-            .layoutPriority(2)
+            Divider()
         }
-        .padding(.horizontal, 20)
-        .padding(.vertical, 14)
+        .background(Color(nsColor: .windowBackgroundColor))
+    }
+}
+
+struct ProjectSchemePicker: View {
+    @EnvironmentObject private var store: LaunchPadStore
+    let project: ManagedProject
+
+    var body: some View {
+        Picker(L10n.string("Configuration.Scheme"), selection: Binding(
+            get: { project.scheme },
+            set: { store.updateScheme(project.id, value: $0) }
+        )) {
+            if !project.availableSchemes.contains(project.scheme) {
+                Text(project.scheme).tag(project.scheme)
+            }
+
+            ForEach(project.availableSchemes, id: \.self) { scheme in
+                Text(scheme).tag(scheme)
+            }
+        }
+        .labelsHidden()
+        .pickerStyle(.menu)
+        .help(L10n.string("Configuration.Scheme"))
+        .disabled(project.availableSchemes.isEmpty || project.status.isBusy)
+        .task(id: project.id) {
+            await store.refreshSchemesIfNeeded(for: project.id)
+        }
     }
 }
 
@@ -43,19 +75,20 @@ struct ProjectStatusSummary: View {
                 ProgressView()
                     .controlSize(.small)
                     .scaleEffect(0.72)
-                    .frame(width: 14, height: 14)
+                    .frame(width: 16, height: 16)
             } else {
                 Image(systemName: statusSymbol)
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(project.status.color)
-                    .frame(width: 14, height: 14)
+                    .font(.system(size: 11, weight: .semibold))
+                    .symbolRenderingMode(.hierarchical)
+                    .foregroundStyle(statusColor)
+                    .frame(width: 16, height: 16)
             }
 
             Text(project.statusMessage)
                 .lineLimit(1)
                 .foregroundStyle(project.status == .failed ? .red : .secondary)
         }
-        .font(.callout)
+        .font(.subheadline)
     }
 
     private var statusSymbol: String {
@@ -72,6 +105,19 @@ struct ProjectStatusSummary: View {
             return "circle"
         }
     }
+
+    private var statusColor: Color {
+        switch project.status {
+        case .running:
+            return .accentColor
+        case .failed:
+            return .red
+        case .building, .installing, .launching, .stopping, .cleaning:
+            return .orange
+        case .stopped, .idle:
+            return .secondary
+        }
+    }
 }
 
 struct DevicePicker: View {
@@ -80,7 +126,7 @@ struct DevicePicker: View {
 
     var body: some View {
         Picker(L10n.string("Control.TargetDevice"), selection: Binding(
-            get: { project.deviceID },
+            get: { selectedDeviceID },
             set: { store.selectDevice(projectID: project.id, deviceID: $0) }
         )) {
             if !hasSelectedDevice {
@@ -106,8 +152,12 @@ struct DevicePicker: View {
         .disabled(store.devices.isEmpty || project.status.isBusy)
     }
 
+    private var selectedDeviceID: String {
+        store.devices.first { $0.matches(project.deviceID) }?.id ?? project.deviceID
+    }
+
     private var hasSelectedDevice: Bool {
-        store.devices.contains { $0.id == project.deviceID }
+        store.devices.contains { $0.id == selectedDeviceID }
     }
 
     private var selectedDeviceTitle: String {
@@ -151,9 +201,11 @@ struct ProjectRunButton: View {
             }
         } label: {
             Label(title, systemImage: iconName)
-                .frame(minWidth: 76)
+                .frame(minWidth: 68)
         }
         .buttonStyle(.borderedProminent)
+        .buttonBorderShape(.roundedRectangle)
+        .controlSize(.regular)
         .tint(tint)
         .disabled(isDisabled)
         .help(help)

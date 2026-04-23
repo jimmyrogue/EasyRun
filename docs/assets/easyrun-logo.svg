@@ -1,0 +1,31 @@
+<svg width="960" height="240" viewBox="0 0 960 240" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">easyRun logo</title>
+  <desc id="desc">A macOS-style launcher mark with a play symbol and Xcode project lanes, followed by the easyRun wordmark.</desc>
+  <defs>
+    <linearGradient id="markGradient" x1="48" y1="36" x2="188" y2="204" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#18A0FB"/>
+      <stop offset="1" stop-color="#0A66FF"/>
+    </linearGradient>
+    <filter id="markShadow" x="22" y="18" width="196" height="212" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feFlood flood-opacity="0" result="BackgroundImageFix"/>
+      <feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha"/>
+      <feOffset dy="10"/>
+      <feGaussianBlur stdDeviation="13"/>
+      <feComposite in2="hardAlpha" operator="out"/>
+      <feColorMatrix type="matrix" values="0 0 0 0 0.033 0 0 0 0 0.157 0 0 0 0 0.365 0 0 0 0.18 0"/>
+      <feBlend mode="normal" in2="BackgroundImageFix" result="effect1_dropShadow_1_1"/>
+      <feBlend mode="normal" in="SourceGraphic" in2="effect1_dropShadow_1_1" result="shape"/>
+    </filter>
+  </defs>
+
+  <g filter="url(#markShadow)">
+    <rect x="54" y="38" width="148" height="164" rx="36" fill="url(#markGradient)"/>
+    <path d="M104 83H151" stroke="white" stroke-opacity="0.82" stroke-width="10" stroke-linecap="round"/>
+    <path d="M104 120H132" stroke="white" stroke-opacity="0.52" stroke-width="10" stroke-linecap="round"/>
+    <path d="M104 157H151" stroke="white" stroke-opacity="0.52" stroke-width="10" stroke-linecap="round"/>
+    <path d="M147 102L147 138L176 120L147 102Z" fill="white"/>
+  </g>
+
+  <text x="252" y="128" font-family="SF Pro Display, -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif" font-size="78" font-weight="750" letter-spacing="-2.2" fill="#101828">easy<tspan fill="#0A66FF">Run</tspan></text>
+  <text x="258" y="166" font-family="SF Pro Text, -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif" font-size="22" font-weight="500" letter-spacing="0" fill="#667085">Run iOS apps without opening Xcode.</text>
+</svg>

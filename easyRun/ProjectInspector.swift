@@ -4,7 +4,7 @@ enum ProjectInspector {
     static func makeProject(from url: URL, devices: [RunDevice]) async throws -> ManagedProject {
         let kind = try kind(for: url)
         let list = try await xcodeList(path: url.path, kind: kind)
-        let schemes = list.project?.schemes ?? list.workspace?.schemes ?? []
+        let schemes = normalizedSchemes(list.project?.schemes ?? list.workspace?.schemes ?? [])
         let scheme = schemes.first ?? url.deletingPathExtension().lastPathComponent
         let configuration = list.project?.configurations?.first { $0 == "Debug" } ?? "Debug"
         let bundleID = await bundleIdentifier(path: url.path, kind: kind, scheme: scheme, configuration: configuration)
@@ -15,6 +15,7 @@ enum ProjectInspector {
             path: url.path,
             kind: kind,
             scheme: scheme,
+            schemes: schemes,
             configuration: configuration,
             deviceID: device?.udid ?? "",
             deviceName: device?.name ?? L10n.string("Device.NoDevice"),
@@ -28,6 +29,11 @@ enum ProjectInspector {
 
     static func projectArguments(for project: ManagedProject) -> [String] {
         [project.kind.xcodebuildFlag, project.path]
+    }
+
+    static func schemes(for project: ManagedProject) async throws -> [String] {
+        let list = try await xcodeList(path: project.path, kind: project.kind)
+        return normalizedSchemes(list.project?.schemes ?? list.workspace?.schemes ?? [])
     }
 
     static func destination(for project: ManagedProject) -> String {
@@ -60,6 +66,13 @@ enum ProjectInspector {
         parseBuildSettings(output)["PRODUCT_BUNDLE_IDENTIFIER"]?.trimmed
     }
 
+    static func executableNameFromBuildSettings(_ output: String) -> String? {
+        let settings = parseBuildSettings(output)
+        return settings["EXECUTABLE_NAME"]?.trimmed
+            ?? settings["PRODUCT_NAME"]?.trimmed
+            ?? settings["TARGET_NAME"]?.trimmed
+    }
+
     private static func kind(for url: URL) throws -> ProjectKind {
         switch url.pathExtension {
         case "xcodeproj": return .project
@@ -81,6 +94,16 @@ enum ProjectInspector {
         )
         let json = extractJSON(from: result.output)
         return try JSONDecoder().decode(XcodeListResponse.self, from: Data(json.utf8))
+    }
+
+    private static func normalizedSchemes(_ schemes: [String]) -> [String] {
+        var seen = Set<String>()
+        return schemes.filter { scheme in
+            let name = scheme.trimmed
+            guard !name.isEmpty, !seen.contains(name) else { return false }
+            seen.insert(name)
+            return true
+        }
     }
 
     private static func bundleIdentifier(

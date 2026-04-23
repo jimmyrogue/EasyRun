@@ -39,8 +39,12 @@
 "Empty.Title" = "添加 Xcode 项目";
 
 "Error.CommandFailedFormat" = "%@ 执行失败，退出码为 %d\n%@";
+"Error.BundleIDMissingFormat" = "无法从 %@ 读取 CFBundleIdentifier。";
 "Error.DropXcodeProject" = "请拖入 .xcodeproj 或 .xcworkspace 文件。";
+"Error.InfoPlistMissingFormat" = "无法从 %@ 读取 Info.plist。";
 "Error.PickDeviceFirst" = "请先选择一个模拟器或设备。";
+"Error.ProductDirectoryMissingFormat" = "构建产物目录不存在：%@";
+"Error.ProductNotFoundFormat" = "在 %@ 中没有找到 .app 产物。";
 "Error.RefusingUnsafeClean" = "拒绝清理 ~/Library/Developer/Xcode/DerivedData/LaunchPad-* 之外的路径。";
 "Error.SchemeRequired" = "Scheme 不能为空。";
 
@@ -52,9 +56,16 @@
 "Help.TargetDevice" = "目标设备";
 
 "Log.CleanedPathFormat" = "已清理 %@";
+"Log.DevicePIDFormat" = "真机应用 PID：%d";
+"Log.PhaseFailedFormat" = "[%.1f 秒] %@ 失败。";
+"Log.PhaseFinishedFormat" = "[%.1f 秒] %@ 完成。";
+"Log.PhaseStartedFormat" = "开始 %@…";
 "Log.PhysicalStopNeedsPID" = "停止真机应用需要启动进程 PID。请再次运行以使用 --terminate-existing，或在设备上手动停止。";
-"Log.RuntimeAttachedFormat" = "已连接 %@ 的运行日志。";
+"Log.ProductResolvedFormat" = "已解析产物：%@\nBundle ID：%@\n可执行文件：%@";
+"Log.ProductResolverFallbackFormat" = "产物查找需要回退到 build settings：%@";
+"Log.RuntimeAttachedFormat" = "已连接运行日志：%@。";
 "Log.RuntimeFailedFormat" = "运行日志启动失败：%@";
+"Log.RuntimeProcessExitedFormat" = "%@ 已退出，状态码 %d。";
 
 "Logs.Build" = "构建日志";
 "Logs.Empty" = "暂无日志输出。";
@@ -90,6 +101,17 @@
 "Panel.ScanFolder.Title" = "选择要扫描的文件夹";
 
 "Project.SummaryLine" = "%@ · %@ · Scheme：%@";
+
+"RunPhase.BootSimulator" = "启动模拟器";
+"RunPhase.Build" = "构建";
+"RunPhase.Install" = "安装";
+"RunPhase.LaunchAttachLogs" = "启动并连接日志";
+"RunPhase.ResolveProduct" = "解析产物";
+
+"RuntimeLogMode.DeviceConsole" = "真机 Console";
+"RuntimeLogMode.SimulatorConsole" = "模拟器 Console";
+"RuntimeLogMode.SimulatorUnifiedLog" = "模拟器 Unified Log";
+"RuntimeLogMode.Unavailable" = "运行日志不可用";
 
 "Sidebar.NoProjects" = "暂无项目";
 "Sidebar.Projects" = "项目";
