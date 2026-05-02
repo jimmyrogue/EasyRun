@@ -138,6 +138,8 @@
 "StatusBar.Working" = "Working";
 
 "StatusMessage.BootingFormat" = "Booting %@...";
+"StatusMessage.AppExited" = "App exited";
+"StatusMessage.AppExitedWithCodeFormat" = "App exited with code %d";
 "StatusMessage.DerivedDataCleaned" = "DerivedData cleaned";
 "StatusMessage.ImportedFormat" = "Imported %@";
 "StatusMessage.InstallingFormat" = "Installing %@...";

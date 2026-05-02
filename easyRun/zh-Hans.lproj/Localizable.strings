@@ -138,6 +138,8 @@
 "StatusBar.Working" = "处理中";
 
 "StatusMessage.BootingFormat" = "正在启动 %@…";
+"StatusMessage.AppExited" = "应用已退出";
+"StatusMessage.AppExitedWithCodeFormat" = "应用已退出，退出码 %d";
 "StatusMessage.DerivedDataCleaned" = "DerivedData 已清理";
 "StatusMessage.ImportedFormat" = "已导入 %@";
 "StatusMessage.InstallingFormat" = "正在安装 %@…";

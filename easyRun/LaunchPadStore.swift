@@ -554,6 +554,9 @@ final class LaunchPadStore: ObservableObject {
             product: product,
             onOutput: { [weak self] chunk in
                 self?.appendRuntimeLog(project.id, chunk)
+            },
+            onAppExit: { [weak self] status in
+                self?.handleRuntimeAppExit(projectID: project.id, exitCode: status)
             }
         )
     }
@@ -565,10 +568,26 @@ final class LaunchPadStore: ObservableObject {
             onOutput: { [weak self] chunk in
                 self?.appendRuntimeLog(project.id, chunk)
             },
+            onAppExit: { [weak self] status in
+                self?.handleRuntimeAppExit(projectID: project.id, exitCode: status)
+            },
             onJSONOutputReady: { [weak self] outputURL in
                 self?.scheduleDevicePIDRead(projectID: project.id, outputURL: outputURL)
             }
         )
+    }
+
+    private func handleRuntimeAppExit(projectID: UUID, exitCode: Int32) {
+        guard projects.first(where: { $0.id == projectID })?.status == .running else { return }
+
+        stopRuntimeLog(for: projectID)
+        updateAndSave(projectID) {
+            $0.status = .stopped
+            $0.statusMessage = exitCode == 0
+                ? L10n.string("StatusMessage.AppExited")
+                : L10n.format("StatusMessage.AppExitedWithCodeFormat", Int(exitCode))
+            $0.lastDevicePID = nil
+        }
     }
 
     private func scheduleDevicePIDRead(projectID: UUID, outputURL: URL) {
@@ -577,6 +596,10 @@ final class LaunchPadStore: ObservableObject {
             for delay in delays {
                 try? await Task.sleep(nanoseconds: delay)
                 guard let self else { return }
+                guard let status = self.projects.first(where: { $0.id == projectID })?.status,
+                      status == .launching || status == .running else {
+                    return
+                }
                 if let pid = self.parsePID(from: outputURL) {
                     self.updateAndSave(projectID) { $0.lastDevicePID = pid }
                     self.appendRuntimeLog(projectID, L10n.format("Log.DevicePIDFormat", pid) + "\n")

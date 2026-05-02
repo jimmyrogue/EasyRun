@@ -38,10 +38,16 @@ final class RuntimeLogController {
     func startSimulatorLogs(
         project: ManagedProject,
         product: BuildProductInfo,
-        onOutput: @escaping @MainActor (String) -> Void
+        onOutput: @escaping @MainActor (String) -> Void,
+        onAppExit: @escaping @MainActor (Int32) -> Void
     ) throws {
         stop(projectID: project.id)
-        try startSimulatorConsole(project: project, product: product, onOutput: onOutput)
+        try startSimulatorConsole(
+            project: project,
+            product: product,
+            onOutput: onOutput,
+            onAppExit: onAppExit
+        )
         do {
             try startSimulatorUnifiedLog(project: project, product: product, onOutput: onOutput)
         } catch {
@@ -53,6 +59,7 @@ final class RuntimeLogController {
         project: ManagedProject,
         product: BuildProductInfo,
         onOutput: @escaping @MainActor (String) -> Void,
+        onAppExit: @escaping @MainActor (Int32) -> Void,
         onJSONOutputReady: @escaping @MainActor (URL) -> Void
     ) throws {
         stop(projectID: project.id)
@@ -75,6 +82,7 @@ final class RuntimeLogController {
             onTermination: { status in
                 onOutput(L10n.format("Log.RuntimeProcessExitedFormat", mode.label, Int(status)) + "\n")
                 onJSONOutputReady(outputURL)
+                onAppExit(status)
                 try? FileManager.default.removeItem(at: outputURL)
             }
         )
@@ -89,7 +97,8 @@ final class RuntimeLogController {
     private func startSimulatorConsole(
         project: ManagedProject,
         product: BuildProductInfo,
-        onOutput: @escaping @MainActor (String) -> Void
+        onOutput: @escaping @MainActor (String) -> Void,
+        onAppExit: @escaping @MainActor (Int32) -> Void
     ) throws {
         let mode = RuntimeLogMode.simulatorConsole
         let process = try ShellCommand.startStreaming(
@@ -105,6 +114,7 @@ final class RuntimeLogController {
             onOutput: onOutput,
             onTermination: { status in
                 onOutput(L10n.format("Log.RuntimeProcessExitedFormat", mode.label, Int(status)) + "\n")
+                onAppExit(status)
             }
         )
 
