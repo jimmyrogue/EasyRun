@@ -7,39 +7,48 @@
 </p>
 
 <p align="center">
+  一个轻量的原生 macOS 工具，用来快速构建、安装和启动 iOS 项目，不必打开 Xcode。
+</p>
+
+<p align="center">
   <img alt="Platform" src="https://img.shields.io/badge/platform-macOS-lightgrey">
   <img alt="Swift" src="https://img.shields.io/badge/Swift-5-orange">
   <img alt="Xcode" src="https://img.shields.io/badge/Xcode-required-blue">
   <img alt="License" src="https://img.shields.io/badge/license-MIT-green">
 </p>
 
-## Why
+## What Is easyRun?
 
-easyRun is for developers who use AI coding tools, terminals, or lightweight editors for iOS work, but still need a quick way to build, install, launch, stop, and inspect logs for an Xcode project.
+easyRun is a small menu bar app for iOS developers who spend most of their time in AI coding tools, terminals, or lightweight editors, but still need a quick way to run an Xcode project on a simulator or a real device.
 
-It is not an IDE and it does not try to replace Xcode. It is a small native macOS control surface for the parts you need all day: project, scheme, device, run, stop, logs.
+easyRun 是一个常驻菜单栏的 macOS 小工具，适合用 AI 编程工具、终端或轻量编辑器开发 iOS 项目的人。它不替代 Xcode，只把日常最常用的运行流程做得更快。
 
-## Features
+## What Can It Do?
 
-- Add a folder and automatically discover `.xcodeproj` / `.xcworkspace` files.
-- Skip dependency folders such as `Pods`, `Carthage`, `SourcePackages`, `DerivedData`, `.build`, and `node_modules`.
-- Pick scheme, configuration, and target device from the main window.
-- Run and stop apps on iOS simulators and connected physical devices.
-- Menu bar controls for quick Run / Stop and target-device selection.
-- Device groups for physical devices, iPhone, iPad, Apple TV, Apple Watch, Vision, and other destinations.
-- Build log and runtime log panels with search, copy, clear, capped rendering, and auto-scroll.
-- Runtime log capture through `simctl` / `devicectl` console output where available.
-- Project order can be changed by dragging rows in the sidebar.
-- English and Simplified Chinese localization.
+- Add an `.xcodeproj` or `.xcworkspace` and discover available schemes automatically.
+- Choose a target scheme and a simulator or connected iOS device.
+- Build, install, run, stop, and restart apps from the main window or menu bar.
+- Keep running in the menu bar after the main window is closed.
+- View build logs and runtime logs when something fails.
+- Save project configuration locally on your Mac.
 
-## Requirements
+## 能做什么？
+
+- 添加 `.xcodeproj` 或 `.xcworkspace`，自动识别可用 Scheme。
+- 选择 Target 和目标设备，支持模拟器和已连接真机。
+- 在主窗口或菜单栏里启动、停止、重启 App。
+- 关闭主窗口后继续常驻菜单栏，随时可以快速操作。
+- 查看构建日志和运行时日志，方便排查失败原因。
+- 项目配置只保存在本机。
+
+## Requirements / 环境要求
 
 - macOS 13 Ventura or later.
 - Xcode installed and selected with `xcode-select`.
-- iOS simulator runtimes or connected iOS devices, depending on your target.
-- For physical-device console output, a recent Xcode with `devicectl` support is recommended.
+- iOS simulator runtimes or connected iOS devices.
+- A recent Xcode is recommended for physical-device console logs.
 
-## Build From Source
+## Build / 本地构建
 
 ```bash
 git clone https://github.com/jimmyrogue/EasyRun.git
@@ -53,89 +62,20 @@ To open the project in Xcode:
 open easyRun.xcodeproj
 ```
 
-## Package A Test Build
-
-The repository includes a simple local packaging script for tester builds:
+## Package / 本地打包
 
 ```bash
 bash scripts/package-test.sh
 ```
 
-The script builds the Release configuration, ad-hoc signs the app, verifies the signature, and writes:
+The script creates a local tester build at:
 
 ```text
 build/distribution/easyRun-test.zip
 ```
 
-Because this is not Developer ID signed or notarized, Gatekeeper may reject the app on another Mac. Testers can Control-click the app and choose Open, or you can replace the signing flow with your own Developer ID certificate and notarization process.
+This build is ad-hoc signed and not notarized, so macOS Gatekeeper may warn on another Mac.
 
-## Usage
-
-1. Launch easyRun.
-2. Click Add or drag a folder into the window.
-3. Let easyRun scan for Xcode projects or workspaces.
-4. Select a project from the sidebar.
-5. Choose a scheme and target device.
-6. Press Run.
-7. Expand Logs when you need build or runtime output.
-
-The app keeps running in the menu bar after the main window is closed, so you can run or stop projects without reopening the full window.
-
-## How It Works
-
-easyRun is a native SwiftUI + AppKit macOS app. The UI is intentionally close to Xcode's project navigator and toolbar patterns, while the execution layer shells out to Apple's own developer tools:
-
-- `xcodebuild` for build operations.
-- `xcrun simctl` for simulator boot, install, launch, stop, and console output.
-- `xcrun devicectl` for modern physical-device install, launch, and console output.
-- `xcrun xctrace` as a compatibility source for device discovery where needed.
-
-Project configuration is stored locally under:
-
-```text
-~/Library/Application Support/LaunchPadiOS/projects.json
-```
-
-No project data is sent to a server.
-
-## Project Structure
-
-```text
-easyRun/
-  BuildProductResolver.swift   # Finds built .app products and bundle metadata.
-  DeviceScanner.swift          # Discovers simulators and physical devices.
-  LaunchPadStore.swift         # Main state and run/stop/clean orchestration.
-  ProjectInspector.swift       # Reads schemes and project metadata.
-  RuntimeLogController.swift   # Streams simulator/device runtime logs.
-  ShellCommand.swift           # Async and streaming process helpers.
-  StatusBarController.swift    # Menu bar integration.
-  Project*View.swift           # SwiftUI window UI.
-scripts/
-  package-test.sh              # Local tester packaging script.
-docs/assets/
-  easyrun-logo.svg             # Project logo.
-  easyrun-mark.svg             # App icon source mark.
-```
-
-## Roadmap
-
-- Signed and notarized distribution workflow.
-- Optional `.dmg` packaging.
-- More robust physical-device diagnostics.
-- Launch arguments and environment variable presets.
-- Keyboard shortcuts for favorite projects.
-
-## Contributing
-
-Issues and pull requests are welcome. For UI changes, please keep the app native, compact, and developer-tool-like. For runtime changes, prefer Apple's built-in command-line tools before adding new dependencies.
-
-Useful checks before opening a pull request:
-
-```bash
-xcodebuild -project easyRun.xcodeproj -scheme easyRun -configuration Debug build
-git diff --check
-```
-
-## License
+## License / 许可证
 
 MIT. See [LICENSE](LICENSE).
