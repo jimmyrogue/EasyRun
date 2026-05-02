@@ -15,6 +15,8 @@
 "Action.Run" = "Run";
 "Action.Scan" = "Scan";
 "Action.ShowMainWindow" = "Show Main Window";
+"Action.Start" = "Start";
+"Action.Restart" = "Restart";
 "Action.Stop" = "Stop";
 
 "Configuration.BundleID" = "Bundle ID";
@@ -74,10 +76,16 @@
 "Logs.Title" = "Logs";
 
 "Menu.BusyActionFormat" = "%@...";
+"Menu.DeviceFormat" = "Select Device: %@";
 "Menu.NoDevicesFound" = "No Devices Found";
 "Menu.NoProjectsYet" = "No Projects Yet";
+"Menu.NoTargetsFound" = "No Targets Found";
+"Menu.NoTargetSelected" = "No Target";
+"Menu.Other" = "Other";
+"Menu.ProjectBusyFormat" = "%@ (%@...)";
 "Menu.RunProjectFormat" = "Run %@";
 "Menu.StopProjectFormat" = "Stop %@";
+"Menu.TargetFormat" = "Select Target: %@";
 
 "Message.AllProjectsAlreadyAdded" = "All discovered projects are already in your list.";
 "Message.CouldNotSaveProjectsFormat" = "Could not save projects: %@";

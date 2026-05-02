@@ -15,6 +15,8 @@
 "Action.Run" = "运行";
 "Action.Scan" = "扫描";
 "Action.ShowMainWindow" = "显示主窗口";
+"Action.Start" = "启动";
+"Action.Restart" = "重启";
 "Action.Stop" = "停止";
 
 "Configuration.BundleID" = "Bundle ID";
@@ -74,10 +76,16 @@
 "Logs.Title" = "日志";
 
 "Menu.BusyActionFormat" = "%@…";
+"Menu.DeviceFormat" = "选择目标设备：%@";
 "Menu.NoDevicesFound" = "未找到设备";
 "Menu.NoProjectsYet" = "暂无项目";
+"Menu.NoTargetsFound" = "未找到 Target";
+"Menu.NoTargetSelected" = "无 Target";
+"Menu.Other" = "其他";
+"Menu.ProjectBusyFormat" = "%@（%@…）";
 "Menu.RunProjectFormat" = "运行 %@";
 "Menu.StopProjectFormat" = "停止 %@";
+"Menu.TargetFormat" = "选择 Target：%@";
 
 "Message.AllProjectsAlreadyAdded" = "扫描到的项目都已经在列表中。";
 "Message.CouldNotSaveProjectsFormat" = "无法保存项目：%@";
